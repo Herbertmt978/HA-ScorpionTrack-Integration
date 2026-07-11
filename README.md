@@ -1,5 +1,6 @@
 [![Validate](https://github.com/Herbertmt978/ha-scorpiontrack-integration/actions/workflows/validate.yml/badge.svg)](https://github.com/Herbertmt978/ha-scorpiontrack-integration/actions/workflows/validate.yml)
 [![Hassfest](https://github.com/Herbertmt978/ha-scorpiontrack-integration/actions/workflows/hassfest.yml/badge.svg)](https://github.com/Herbertmt978/ha-scorpiontrack-integration/actions/workflows/hassfest.yml)
+[![Python quality](https://github.com/Herbertmt978/ha-scorpiontrack-integration/actions/workflows/python-quality.yml/badge.svg)](https://github.com/Herbertmt978/ha-scorpiontrack-integration/actions/workflows/python-quality.yml)
 [![GitHub Release](https://img.shields.io/github/v/release/Herbertmt978/ha-scorpiontrack-integration?display_name=tag&sort=semver)](https://github.com/Herbertmt978/ha-scorpiontrack-integration/releases)
 
 # ScorpionTrack Integration
@@ -12,6 +13,9 @@ This integration gives Home Assistant one clean ScorpionTrack entry point with t
 - `Shared location link` for lightweight read-only tracking
 
 The two modes share the same polished entity model and install path, while still staying honest about the different capabilities and risks of each data source.
+
+> [!IMPORTANT]
+> Home Assistant now includes an official `scorpiontrack` integration for shared-location links. This custom integration uses the same domain because it preserves the richer portal-account mode and its established entity IDs. Installing it therefore overrides the built-in integration. It cannot be listed in the default HACS store under HACS's duplicate-domain rules; install it as a custom repository only.
 
 ## Highlights
 
@@ -35,6 +39,8 @@ The two modes share the same polished entity model and install path, while still
 5. Choose `Integration` as the category.
 6. Install `ScorpionTrack Integration`.
 7. Restart Home Assistant.
+
+Before installing or removing the custom integration, make a Home Assistant backup. Shared-link entries use compatible token data, but portal-account entries require this custom integration and are not supported by the built-in integration.
 
 ### Manual
 
@@ -86,7 +92,7 @@ One share can include multiple vehicles, and the integration will import every v
 
 ## Entity Design
 
-The integration intentionally keeps the actual map coordinates on the vehicle `device_tracker`, while the related sensors use readable location text and non-map attributes instead. That keeps Home Assistant’s map focused on one marker per vehicle instead of plotting every related sensor and status entity.
+The integration intentionally keeps the actual map coordinates on the vehicle `device_tracker`, while the related sensors use readable location text and non-map attributes instead. That keeps Home Assistant's map focused on one marker per vehicle instead of plotting every related sensor and status entity.
 
 Alert sensors follow the same rule. `Latest Alert` keeps the useful alert-location details, but those coordinates are exposed as alert-specific attributes rather than generic `latitude` / `longitude`, so the alert data does not become a second map marker by accident.
 
@@ -101,12 +107,14 @@ Only controls that have been verified as behaving like true toggles are exposed 
 - No live credentials or share tokens are included in this repository.
 - Account mode stores the portal email and password in the Home Assistant config entry so it can refresh automatically.
 - The integration does not expose the portal app API key as an entity state or attribute.
+- Fleet API requests are restricted to HTTPS Scorpion/ScorpionTrack hosts, do not follow redirects, and reject absolute request paths.
+- Account authentication, portal, and connection failures are classified without copying upstream response text or account credential fragments into logs.
 - If you open an issue, avoid posting live credentials, tokens, or screenshots that reveal current locations.
 - The authenticated portal mode relies on private web behaviour, so it should be treated more conservatively than a documented public API integration.
 
 ## Troubleshooting and Logging
 
-The integration now logs the important failure paths needed to diagnose real-world setup problems, including:
+The integration reports the important failure categories needed to diagnose real-world setup problems, including:
 
 - rejected portal username or password attempts
 - redirects back to the login page
@@ -114,7 +122,7 @@ The integration now logs the important failure paths needed to diagnose real-wor
 - invalid, expired, revoked, or malformed shared-location links
 - unexpected non-JSON or malformed portal responses
 
-Passwords and share tokens are not written to the logs. Emails and tokens are lightly redacted so you can still correlate reports safely.
+Passwords, API keys, full share tokens, raw upstream error text, and full email addresses are not written to logs or user-facing action errors. The reviewed share client may include only a short masked token prefix and suffix in diagnostic logs; still treat logs as potentially sensitive before sharing them.
 
 To enable deeper diagnostics in Home Assistant, add:
 
@@ -127,3 +135,5 @@ logger:
 ## Development Notes
 
 The authenticated portal work is documented in [docs/portal-notes.md](docs/portal-notes.md).
+
+The test suite exercises both the documented minimum (`Home Assistant 2025.1.0` on Python 3.12) and a current Home Assistant release, requires complete config-flow coverage, and verifies that the custom integration—not Core's same-domain implementation—is loaded. Share mode uses the reviewed `pyscorpiontrack` client rather than maintaining a second embedded client.

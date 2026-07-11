@@ -2,24 +2,29 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, override
 
-from homeassistant.components.device_tracker import SourceType, TrackerEntity
-from homeassistant.config_entries import ConfigEntry
+from homeassistant.components.device_tracker import TrackerEntity
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN
+from .account_api import ScorpionTrackVehicleSummary
+from .account_coordinator import (
+    ScorpionTrackAccountConfigEntry,
+    ScorpionTrackAccountCoordinator,
+)
 from .account_entity import ScorpionTrackVehicleEntity
+
+PARALLEL_UPDATES = 0
 
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: ConfigEntry,
+    entry: ScorpionTrackAccountConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up ScorpionTrack tracker entities."""
-    coordinator = hass.data[DOMAIN][entry.entry_id]["coordinator"]
+    coordinator = entry.runtime_data
     known_vehicle_ids: set[int] = set()
 
     @callback
@@ -45,50 +50,68 @@ async def async_setup_entry(
 class ScorpionTrackTrackerEntity(ScorpionTrackVehicleEntity, TrackerEntity):
     """Represent the latest authenticated GPS location for a vehicle."""
 
-    _attr_has_entity_name = False
-    _attr_icon = "mdi:car"
-    _attr_source_type = SourceType.GPS
+    _attr_name = None
+    _attr_translation_key = "vehicle_location"
 
-    def __init__(self, coordinator, vehicle_id: int) -> None:
+    def __init__(
+        self, coordinator: ScorpionTrackAccountCoordinator, vehicle_id: int
+    ) -> None:
         """Initialize the tracker."""
         super().__init__(coordinator, vehicle_id)
         self._attr_unique_id = f"{self.account_identifier}_{vehicle_id}_tracker"
 
-    @property
-    def name(self) -> str:
-        """Return the registration-focused tracker label."""
-        return self.vehicle.registration or self.vehicle.display_name
+    def _available_vehicle(self) -> ScorpionTrackVehicleSummary | None:
+        """Return the vehicle if the tracker is available."""
+        if not super().available:
+            return None
+        return self.get_vehicle()
 
     @property
+    @override
     def available(self) -> bool:
         """Return if the tracker is available."""
+        vehicle = self._available_vehicle()
+        position = vehicle.position if vehicle is not None else None
         return (
-            super().available
-            and self.position is not None
-            and self.position.latitude is not None
-            and self.position.longitude is not None
+            position is not None
+            and position.latitude is not None
+            and position.longitude is not None
         )
 
     @property
+    @override
     def latitude(self) -> float | None:
         """Return the latitude."""
-        return self.position.latitude if self.position else None
+        vehicle = self._available_vehicle()
+        position = vehicle.position if vehicle is not None else None
+        return position.latitude if position is not None else None
 
     @property
+    @override
     def longitude(self) -> float | None:
         """Return the longitude."""
-        return self.position.longitude if self.position else None
+        vehicle = self._available_vehicle()
+        position = vehicle.position if vehicle is not None else None
+        return position.longitude if position is not None else None
 
     @property
+    @override
     def location_accuracy(self) -> float:
         """Return the location accuracy in meters."""
-        if self.position is None or self.position.accuracy is None:
+        vehicle = self._available_vehicle()
+        position = vehicle.position if vehicle is not None else None
+        if position is None or position.accuracy is None:
             return 0.0
-        return float(self.position.accuracy)
+        return float(position.accuracy)
 
     @property
+    @override
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return extra state attributes."""
-        attributes = self.common_vehicle_attributes(include_coordinates=True)
-        attributes["formatted_location"] = self.format_location()
+        vehicle = self._available_vehicle()
+        if vehicle is None:
+            return {}
+
+        attributes = self.common_vehicle_attributes(vehicle)
+        attributes["formatted_location"] = self.format_location(vehicle.position)
         return attributes

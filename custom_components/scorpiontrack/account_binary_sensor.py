@@ -2,29 +2,36 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from typing import Callable
+from typing import override
 
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .account_api import ScorpionTrackAccountData, ScorpionTrackVehicleSummary
-from .const import DOMAIN
+from .account_coordinator import (
+    ScorpionTrackAccountConfigEntry,
+    ScorpionTrackAccountCoordinator,
+)
 from .account_entity import ScorpionTrackVehicleEntity
+
+PARALLEL_UPDATES = 0
 
 
 @dataclass(frozen=True, kw_only=True)
 class ScorpionTrackVehicleBinarySensorDescription(BinarySensorEntityDescription):
     """Describe a vehicle-level binary sensor."""
 
-    value_fn: Callable[[ScorpionTrackAccountData, ScorpionTrackVehicleSummary], bool | None]
+    value_fn: Callable[
+        [ScorpionTrackAccountData, ScorpionTrackVehicleSummary], bool | None
+    ]
 
 
 VEHICLE_BINARY_SENSOR_DESCRIPTIONS: tuple[
@@ -119,11 +126,11 @@ VEHICLE_BINARY_SENSOR_DESCRIPTIONS: tuple[
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: ConfigEntry,
+    entry: ScorpionTrackAccountConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up ScorpionTrack vehicle binary sensors."""
-    coordinator = hass.data[DOMAIN][entry.entry_id]["coordinator"]
+    coordinator = entry.runtime_data
     known_vehicle_ids: set[int] = set()
 
     @callback
@@ -157,19 +164,28 @@ class ScorpionTrackVehicleBinarySensorEntity(
 
     entity_description: ScorpionTrackVehicleBinarySensorDescription
 
-    def __init__(self, coordinator, vehicle_id: int, description) -> None:
+    def __init__(
+        self,
+        coordinator: ScorpionTrackAccountCoordinator,
+        vehicle_id: int,
+        description: ScorpionTrackVehicleBinarySensorDescription,
+    ) -> None:
         """Initialize the binary sensor."""
         super().__init__(coordinator, vehicle_id)
         self.entity_description = description
-        self._attr_unique_id = f"{self.account_identifier}_{vehicle_id}_{description.key}"
+        self._attr_unique_id = (
+            f"{self.account_identifier}_{vehicle_id}_{description.key}"
+        )
         self._attr_name = description.name
 
     @property
+    @override
     def is_on(self) -> bool | None:
         """Return the sensor state."""
         return self.entity_description.value_fn(self.account, self.vehicle)
 
     @property
+    @override
     def extra_state_attributes(self) -> dict[str, object]:
         """Return extra state attributes."""
         return self.common_vehicle_attributes()

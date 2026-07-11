@@ -22,8 +22,10 @@ Choose `Shared location link` if you only want tracking from a ScorpionTrack sha
 
 ### Important note
 
-The authenticated portal mode relies on private web behaviour rather than a documented public API, so it should be treated more conservatively than the shared-link mode.
+Home Assistant includes a built-in `scorpiontrack` integration for shared links. This custom integration uses the same domain to preserve portal-account support and established entity IDs, so installing it overrides the built-in integration. HACS duplicate-domain rules mean it must remain a manually added custom repository.
+
+The authenticated portal mode relies on private web behaviour rather than a documented public API, so it should be treated more conservatively than the shared-link mode. Make a Home Assistant backup before installing or removing it; portal-account entries require this custom integration.
 
 ### Troubleshooting
 
-The integration includes targeted logging for bad usernames/passwords, invalid or expired share links, redirects back to login, and malformed portal responses. Enable Home Assistant debug logging for `custom_components.scorpiontrack` when collecting issue reports.
+The integration classifies bad credentials, invalid or expired share links, login redirects, and malformed portal responses without logging passwords, API keys, full share tokens, full email addresses, or raw upstream error text. The share client may include a short masked token prefix and suffix in diagnostic logs, so review logs before sharing them. Enable Home Assistant debug logging for `custom_components.scorpiontrack` when collecting issue reports.

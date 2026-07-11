@@ -2,24 +2,29 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, override
 
-from homeassistant.components.device_tracker import SourceType, TrackerEntity
-from homeassistant.config_entries import ConfigEntry
+from homeassistant.components.device_tracker import TrackerEntity
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from pyscorpiontrack import ScorpionTrackVehicle
 
-from .const import DOMAIN
+from .share_coordinator import (
+    ScorpionTrackShareConfigEntry,
+    ScorpionTrackShareCoordinator,
+)
 from .share_entity import ScorpionTrackEntity
+
+PARALLEL_UPDATES = 0
 
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: ConfigEntry,
+    entry: ScorpionTrackShareConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up ScorpionTrack tracker entities."""
-    coordinator = hass.data[DOMAIN][entry.entry_id]["coordinator"]
+    coordinator = entry.runtime_data
     known_vehicle_ids: set[int] = set()
 
     @callback
@@ -45,53 +50,58 @@ async def async_setup_entry(
 class ScorpionTrackTrackerEntity(ScorpionTrackEntity, TrackerEntity):
     """Represent the latest shared GPS location for a vehicle."""
 
-    _attr_has_entity_name = False
-    _attr_icon = "mdi:car"
-    _attr_location_accuracy = 0.0
-    _attr_source_type = SourceType.GPS
+    _attr_name = None
+    _attr_translation_key = "vehicle_location"
 
-    def __init__(self, coordinator, vehicle_id: int) -> None:
+    def __init__(
+        self, coordinator: ScorpionTrackShareCoordinator, vehicle_id: int
+    ) -> None:
         """Initialize the tracker."""
         super().__init__(coordinator, vehicle_id)
         self._attr_unique_id = f"{coordinator.data.id}_{vehicle_id}_tracker"
 
-    @property
-    def name(self) -> str:
-        """Return the registration-focused tracker label."""
-        return self.vehicle.registration or self.vehicle.display_name
+    def _available_vehicle(self) -> ScorpionTrackVehicle | None:
+        """Return the vehicle if the tracker is available."""
+        if not super().available:
+            return None
+        return self.get_vehicle()
 
     @property
+    @override
     def available(self) -> bool:
         """Return if the tracker is available."""
-        vehicle = self.get_vehicle()
+        vehicle = self._available_vehicle()
         return (
-            super().available
-            and vehicle is not None
+            vehicle is not None
             and vehicle.position.latitude is not None
             and vehicle.position.longitude is not None
         )
 
     @property
+    @override
     def latitude(self) -> float | None:
         """Return the latitude."""
-        return self.vehicle.position.latitude
+        vehicle = self._available_vehicle()
+        return vehicle.position.latitude if vehicle is not None else None
 
     @property
+    @override
     def longitude(self) -> float | None:
         """Return the longitude."""
-        return self.vehicle.position.longitude
+        vehicle = self._available_vehicle()
+        return vehicle.position.longitude if vehicle is not None else None
 
     @property
-    def location_accuracy(self) -> float:
-        """Return the location accuracy in meters."""
-        return 0.0
-
-    @property
+    @override
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return extra state attributes."""
-        position = self.vehicle.position
+        vehicle = self._available_vehicle()
+        if vehicle is None:
+            return {}
+
+        position = vehicle.position
         converted_speed = self.share.convert_speed(position.speed_kmh)
-        attributes = self.common_location_attributes(include_coordinates=True)
+        attributes = self.common_location_attributes(vehicle)
         attributes.update(
             {
                 "speed": converted_speed,

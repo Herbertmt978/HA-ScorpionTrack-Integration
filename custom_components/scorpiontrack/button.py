@@ -7,7 +7,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import account_button
-from .const import DOMAIN, SETUP_TYPE_ACCOUNT
+from .const import SETUP_TYPE_ACCOUNT, get_setup_type
 
 
 async def async_setup_entry(
@@ -16,6 +16,5 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up ScorpionTrack buttons for the configured entry type."""
-    entry_state = hass.data[DOMAIN][entry.entry_id]
-    if entry_state["type"] == SETUP_TYPE_ACCOUNT:
+    if get_setup_type(entry.data) == SETUP_TYPE_ACCOUNT:
         await account_button.async_setup_entry(hass, entry, async_add_entities)

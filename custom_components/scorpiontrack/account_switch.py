@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable
+from typing import Any, override
 
 from homeassistant.components.switch import SwitchEntity, SwitchEntityDescription
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -16,8 +16,14 @@ from .account_api import (
     ScorpionTrackConnectionError,
     ScorpionTrackPortalError,
 )
-from .const import DOMAIN
+from .account_coordinator import (
+    ScorpionTrackAccountConfigEntry,
+    ScorpionTrackAccountCoordinator,
+)
 from .account_entity import ScorpionTrackVehicleEntity
+from .const import DOMAIN
+
+PARALLEL_UPDATES = 0
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -48,11 +54,11 @@ VEHICLE_SWITCH_DESCRIPTIONS: tuple[ScorpionTrackVehicleSwitchDescription, ...] =
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: ConfigEntry,
+    entry: ScorpionTrackAccountConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up ScorpionTrack vehicle switches."""
-    coordinator = hass.data[DOMAIN][entry.entry_id]["coordinator"]
+    coordinator = entry.runtime_data
     known_vehicle_ids: set[int] = set()
 
     @callback
@@ -83,14 +89,22 @@ class ScorpionTrackVehicleSwitchEntity(ScorpionTrackVehicleEntity, SwitchEntity)
 
     entity_description: ScorpionTrackVehicleSwitchDescription
 
-    def __init__(self, coordinator, vehicle_id: int, description) -> None:
+    def __init__(
+        self,
+        coordinator: ScorpionTrackAccountCoordinator,
+        vehicle_id: int,
+        description: ScorpionTrackVehicleSwitchDescription,
+    ) -> None:
         """Initialize the switch."""
         super().__init__(coordinator, vehicle_id)
         self.entity_description = description
-        self._attr_unique_id = f"{self.account_identifier}_{vehicle_id}_{description.key}"
+        self._attr_unique_id = (
+            f"{self.account_identifier}_{vehicle_id}_{description.key}"
+        )
         self._attr_name = description.name
 
     @property
+    @override
     def available(self) -> bool:
         """Return if the switch is available."""
         return (
@@ -99,15 +113,18 @@ class ScorpionTrackVehicleSwitchEntity(ScorpionTrackVehicleEntity, SwitchEntity)
         )
 
     @property
+    @override
     def is_on(self) -> bool | None:
         """Return the switch state."""
         return self.entity_description.value_fn(self.vehicle)
 
-    async def async_turn_on(self, **kwargs) -> None:
+    @override
+    async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the switch on."""
         await self._async_set_enabled(True)
 
-    async def async_turn_off(self, **kwargs) -> None:
+    @override
+    async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the switch off."""
         await self._async_set_enabled(False)
 
@@ -125,12 +142,17 @@ class ScorpionTrackVehicleSwitchEntity(ScorpionTrackVehicleEntity, SwitchEntity)
             ScorpionTrackPortalError,
         ) as err:
             raise HomeAssistantError(
-                f"Unable to update {self.entity_description.name}: {err}"
+                translation_domain=DOMAIN,
+                translation_key="vehicle_mode_update_failed",
+                translation_placeholders={
+                    "mode": self.entity_description.name or self.entity_description.key
+                },
             ) from err
 
         await self.coordinator.async_request_refresh()
 
     @property
+    @override
     def extra_state_attributes(self) -> dict[str, object]:
         """Return extra state attributes."""
         return self.common_vehicle_attributes()

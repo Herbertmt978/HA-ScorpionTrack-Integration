@@ -2,27 +2,32 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable
+from typing import override
 
 from homeassistant.components.binary_sensor import (
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN
+from .share_coordinator import (
+    ScorpionTrackShareConfigEntry,
+    ScorpionTrackShareCoordinator,
+)
 from .share_entity import ScorpionTrackEntity
+
+PARALLEL_UPDATES = 0
 
 
 @dataclass(frozen=True, kw_only=True)
 class ScorpionTrackBinarySensorDescription(BinarySensorEntityDescription):
     """Describe a ScorpionTrack binary sensor."""
 
-    value_fn: Callable[["ScorpionTrackBinarySensorEntity"], bool]
+    value_fn: Callable[[ScorpionTrackBinarySensorEntity], bool]
 
 
 BINARY_SENSOR_DESCRIPTIONS: tuple[ScorpionTrackBinarySensorDescription, ...] = (
@@ -44,11 +49,11 @@ BINARY_SENSOR_DESCRIPTIONS: tuple[ScorpionTrackBinarySensorDescription, ...] = (
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: ConfigEntry,
+    entry: ScorpionTrackShareConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up ScorpionTrack binary sensor entities."""
-    coordinator = hass.data[DOMAIN][entry.entry_id]["coordinator"]
+    coordinator = entry.runtime_data
     known_vehicle_ids: set[int] = set()
 
     @callback
@@ -81,7 +86,7 @@ class ScorpionTrackBinarySensorEntity(ScorpionTrackEntity, BinarySensorEntity):
 
     def __init__(
         self,
-        coordinator,
+        coordinator: ScorpionTrackShareCoordinator,
         vehicle_id: int,
         description: ScorpionTrackBinarySensorDescription,
     ) -> None:
@@ -92,11 +97,13 @@ class ScorpionTrackBinarySensorEntity(ScorpionTrackEntity, BinarySensorEntity):
         self._attr_name = description.name
 
     @property
+    @override
     def is_on(self) -> bool:
         """Return the binary sensor state."""
         return self.entity_description.value_fn(self)
 
     @property
+    @override
     def extra_state_attributes(self) -> dict[str, object]:
         """Return extra state attributes."""
         return self.common_location_attributes()

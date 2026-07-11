@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import date, datetime
-from typing import Callable
+from typing import override
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -12,7 +13,6 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     EntityCategory,
     UnitOfElectricPotential,
@@ -25,8 +25,13 @@ from .account_api import (
     ScorpionTrackAccountData,
     ScorpionTrackVehicleSummary,
 )
-from .const import DOMAIN
+from .account_coordinator import (
+    ScorpionTrackAccountConfigEntry,
+    ScorpionTrackAccountCoordinator,
+)
 from .account_entity import ScorpionTrackAccountEntity, ScorpionTrackVehicleEntity
+
+PARALLEL_UPDATES = 0
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -41,7 +46,10 @@ class ScorpionTrackVehicleSensorDescription(SensorEntityDescription):
     """Describe a vehicle-level sensor."""
 
     value_fn: Callable[[ScorpionTrackAccountData, ScorpionTrackVehicleSummary], object]
-    unit_fn: Callable[[ScorpionTrackAccountData, ScorpionTrackVehicleSummary], str | None] | None = None
+    unit_fn: (
+        Callable[[ScorpionTrackAccountData, ScorpionTrackVehicleSummary], str | None]
+        | None
+    ) = None
 
 
 ACCOUNT_SENSOR_DESCRIPTIONS: tuple[ScorpionTrackAccountSensorDescription, ...] = (
@@ -180,7 +188,9 @@ VEHICLE_SENSOR_DESCRIPTIONS: tuple[ScorpionTrackVehicleSensorDescription, ...] =
         entity_category=EntityCategory.DIAGNOSTIC,
         suggested_display_precision=1,
         icon="mdi:crosshairs-question",
-        value_fn=lambda account, vehicle: vehicle.position.hdop if vehicle.position else None,
+        value_fn=lambda account, vehicle: (
+            vehicle.position.hdop if vehicle.position else None
+        ),
     ),
     ScorpionTrackVehicleSensorDescription(
         key="last_reported",
@@ -342,11 +352,11 @@ VEHICLE_SENSOR_DESCRIPTIONS: tuple[ScorpionTrackVehicleSensorDescription, ...] =
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: ConfigEntry,
+    entry: ScorpionTrackAccountConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up ScorpionTrack account sensors."""
-    coordinator = hass.data[DOMAIN][entry.entry_id]["coordinator"]
+    coordinator = entry.runtime_data
     known_vehicle_ids: set[int] = set()
     account_entities_added = False
 
@@ -389,7 +399,11 @@ class ScorpionTrackAccountSensorEntity(ScorpionTrackAccountEntity, SensorEntity)
 
     entity_description: ScorpionTrackAccountSensorDescription
 
-    def __init__(self, coordinator, description: ScorpionTrackAccountSensorDescription) -> None:
+    def __init__(
+        self,
+        coordinator: ScorpionTrackAccountCoordinator,
+        description: ScorpionTrackAccountSensorDescription,
+    ) -> None:
         """Initialize the account sensor."""
         super().__init__(coordinator)
         self.entity_description = description
@@ -397,11 +411,13 @@ class ScorpionTrackAccountSensorEntity(ScorpionTrackAccountEntity, SensorEntity)
         self._attr_name = description.name
 
     @property
+    @override
     def native_value(self) -> object:
         """Return the native sensor value."""
         return self.entity_description.value_fn(self.account)
 
     @property
+    @override
     def extra_state_attributes(self) -> dict[str, object]:
         """Return extra state attributes."""
         attributes = self.common_account_attributes()
@@ -424,22 +440,26 @@ class ScorpionTrackVehicleSensorEntity(ScorpionTrackVehicleEntity, SensorEntity)
 
     def __init__(
         self,
-        coordinator,
+        coordinator: ScorpionTrackAccountCoordinator,
         vehicle_id: int,
         description: ScorpionTrackVehicleSensorDescription,
     ) -> None:
         """Initialize the vehicle sensor."""
         super().__init__(coordinator, vehicle_id)
         self.entity_description = description
-        self._attr_unique_id = f"{self.account_identifier}_{vehicle_id}_{description.key}"
+        self._attr_unique_id = (
+            f"{self.account_identifier}_{vehicle_id}_{description.key}"
+        )
         self._attr_name = description.name
 
     @property
+    @override
     def native_value(self) -> object:
         """Return the native sensor value."""
         return self.entity_description.value_fn(self.account, self.vehicle)
 
     @property
+    @override
     def native_unit_of_measurement(self) -> str | None:
         """Return the native unit of measurement."""
         if self.entity_description.unit_fn is None:
@@ -447,12 +467,14 @@ class ScorpionTrackVehicleSensorEntity(ScorpionTrackVehicleEntity, SensorEntity)
         return self.entity_description.unit_fn(self.account, self.vehicle)
 
     @property
+    @override
     def extra_state_attributes(self) -> dict[str, object]:
         """Return extra state attributes."""
-        attributes = self.common_vehicle_attributes()
+        vehicle = self.vehicle
+        attributes = self.common_vehicle_attributes(vehicle)
         if self.entity_description.key == "location":
-            attributes["formatted_location"] = self.format_location()
-            attributes["coordinates"] = _format_coordinates(self.vehicle)
+            attributes["formatted_location"] = self.format_location(vehicle.position)
+            attributes["coordinates"] = _format_coordinates(vehicle)
         return attributes
 
 
@@ -462,10 +484,7 @@ def _format_location(vehicle: ScorpionTrackVehicleSummary) -> str | None:
         return None
     if vehicle.position.address:
         return vehicle.position.address
-    if (
-        vehicle.position.latitude is not None
-        and vehicle.position.longitude is not None
-    ):
+    if vehicle.position.latitude is not None and vehicle.position.longitude is not None:
         return f"{vehicle.position.latitude:.6f}, {vehicle.position.longitude:.6f}"
     return None
 
@@ -486,10 +505,7 @@ def _format_coordinates(vehicle: ScorpionTrackVehicleSummary) -> str | None:
     """Return raw coordinates in a compact string form."""
     if vehicle.position is None:
         return None
-    if (
-        vehicle.position.latitude is None
-        or vehicle.position.longitude is None
-    ):
+    if vehicle.position.latitude is None or vehicle.position.longitude is None:
         return None
     return f"{vehicle.position.latitude:.6f}, {vehicle.position.longitude:.6f}"
 
