@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/Herbertmt978/HA-ScorpionTrack-Integration/security/advisories/new
+    about: Report credentials, token, location, or control vulnerabilities privately.
+  - name: Built-in Home Assistant integration source
+    url: https://github.com/Herbertmt978/ScorpionTrack-Integration
+    about: Review the lower-functionality shared-link-only Core implementation. Install it from Home Assistant's integration screen.

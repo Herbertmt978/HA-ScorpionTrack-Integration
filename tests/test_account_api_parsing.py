@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import json
+import logging
 from collections.abc import Iterable
 from dataclasses import dataclass, fields
 from datetime import UTC, date, datetime, timedelta
@@ -272,6 +273,47 @@ async def test_login_submits_normalized_credentials_then_reuses_session() -> Non
     assert session.calls[0]["kwargs"]["allow_redirects"] is True
     assert session.calls[1]["kwargs"]["allow_redirects"] is False
     assert session.calls[2]["url"].endswith("/customer/vehicle/vehiclelist")
+
+
+@pytest.mark.asyncio
+async def test_login_debug_log_does_not_expose_portal_user_id(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """A successful login log should not expose the internal portal user ID."""
+    internal_user_id = 987654321
+    session = _ScriptedSession(_login_responses(user_id=internal_user_id))
+    client = _client(session)
+    caplog.set_level(
+        logging.DEBUG, logger="custom_components.scorpiontrack.account_api"
+    )
+
+    await client.async_login()
+
+    logged = "\n".join(record.getMessage() for record in caplog.records)
+    assert "Authenticated ScorpionTrack portal session" in logged
+    assert str(internal_user_id) not in logged
+    assert "user_id" not in logged
+
+
+@pytest.mark.asyncio
+async def test_login_failure_log_does_not_expose_portal_user_id(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """A malformed portal bootstrap log should not expose its internal user ID."""
+    internal_user_id = 987654321
+    session = _ScriptedSession(_login_responses(user_id=internal_user_id, api_key=""))
+    client = _client(session)
+    caplog.set_level(
+        logging.WARNING, logger="custom_components.scorpiontrack.account_api"
+    )
+
+    with pytest.raises(ScorpionTrackPortalError, match="fleet API details"):
+        await client.async_login()
+
+    logged = "\n".join(record.getMessage() for record in caplog.records)
+    assert "missing expected API details" in logged
+    assert str(internal_user_id) not in logged
+    assert "user_id" not in logged
 
 
 @pytest.mark.asyncio

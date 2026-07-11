@@ -2,7 +2,10 @@ name: Validate
 
 on:
   push:
+    branches: [main]
+    tags: ["v*"]
   pull_request:
+    branches: [main]
   schedule:
     - cron: "0 0 * * *"
   workflow_dispatch:
@@ -17,8 +20,11 @@ concurrency:
 jobs:
   validate-hacs:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
       - name: HACS validation
         uses: hacs/action@d556e736723344f83838d08488c983a15381059a # 22.5.0
         with:

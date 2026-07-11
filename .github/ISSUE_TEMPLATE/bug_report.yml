@@ -1,0 +1,90 @@
+name: Bug report
+description: Report a reproducible problem with the HACS custom integration
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form only for the HACS custom integration. Security vulnerabilities must be reported privately through the Security Policy link below.
+
+  - type: input
+    id: home_assistant_version
+    attributes:
+      label: Home Assistant version
+      placeholder: 2026.7.2
+    validations:
+      required: true
+
+  - type: input
+    id: integration_version
+    attributes:
+      label: ScorpionTrack Integration version
+      placeholder: v0.2.1
+    validations:
+      required: true
+
+  - type: input
+    id: hacs_version
+    attributes:
+      label: HACS version
+      description: Enter "manual installation" if HACS was not used.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: setup_type
+    attributes:
+      label: Setup type
+      options:
+        - Portal account
+        - Shared-location link
+        - Both
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened?
+      description: Describe the problem and when it started.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+      placeholder: |
+        1. Open ...
+        2. Select ...
+        3. Observe ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+    validations:
+      required: true
+
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Sanitized diagnostics and logs
+      description: Attach the smallest relevant diagnostics file or log extract after reviewing and redacting it. Do not paste secrets or location data.
+      render: text
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I am using the latest published integration release and have restarted Home Assistant.
+          required: true
+        - label: I searched existing issues for the same problem.
+          required: true
+        - label: This report contains no credentials, API keys, cookies, session data, complete or partial share tokens, registrations, identifiers, alert contents, alert screenshots, addresses, coordinates, or location screenshots.
+          required: true
+        - label: This report is for the HACS custom integration, not the built-in Home Assistant integration.
+          required: true
