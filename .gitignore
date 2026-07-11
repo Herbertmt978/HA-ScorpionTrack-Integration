@@ -2,3 +2,9 @@ __pycache__/
 *.py[cod]
 *.log
 .DS_Store
+.coverage
+.pytest_cache/
+.ruff_cache/
+.venv*/
+coverage.xml
+htmlcov/

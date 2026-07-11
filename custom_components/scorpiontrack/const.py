@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from datetime import timedelta
+from typing import Any
 
 from homeassistant.const import Platform
 
@@ -27,8 +29,6 @@ FMS_VEHICLES_PATH = "/vehicles"
 FMS_ALERTS_PATH = "/alerts-dashboard/alerts"
 FMS_ALERTS_BULK_READ_PATH = "/alerts-dashboard/bulk-read"
 
-API_BASE_URL = "https://api2.fleet.scorpiontrack.com/v1"
-
 ACCOUNT_SCAN_INTERVAL = timedelta(minutes=5)
 SHARE_SCAN_INTERVAL = timedelta(minutes=2)
 STALE_POSITION_THRESHOLD = timedelta(hours=24)
@@ -40,3 +40,15 @@ PLATFORMS: tuple[Platform, ...] = (
     Platform.SWITCH,
     Platform.BUTTON,
 )
+
+
+def get_setup_type(data: Mapping[str, Any]) -> str | None:
+    """Return the configured source type, including legacy/Core entries."""
+    setup_type = data.get(CONF_SETUP_TYPE)
+    if setup_type in (SETUP_TYPE_ACCOUNT, SETUP_TYPE_SHARE):
+        return setup_type
+
+    if CONF_SHARE_TOKEN in data:
+        return SETUP_TYPE_SHARE
+
+    return None

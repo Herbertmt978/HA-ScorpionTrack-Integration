@@ -7,18 +7,18 @@ import base64
 import json
 import logging
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
 from typing import Any
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse
 
 from aiohttp import ClientError, ClientSession
 
 from .const import (
     ACCOUNT_DEFAULT_NAME,
     CUSTOMER_MAP_POSITIONS_PATH,
-    FMS_ALERTS_PATH,
     FMS_ALERTS_BULK_READ_PATH,
+    FMS_ALERTS_PATH,
     FMS_VEHICLES_PATH,
     LOGIN_PATH,
     LOGIN_POST_PATH,
@@ -32,6 +32,11 @@ _FMS_API_URL_RE = re.compile(r'window\.ScorpionData\.fmsApiUrl\s*=\s*"([^"]+)"')
 _PORTAL_USER_JSON_RE = re.compile(
     r"window\.ScorpionData\.user\s*=\s*(\{.*?\});",
     re.DOTALL,
+)
+_TRUSTED_FMS_HOST_SUFFIXES = (
+    "scorpionauto.com",
+    "scorpiontrack.co.uk",
+    "scorpiontrack.com",
 )
 _LOGGER = logging.getLogger(__name__)
 
@@ -59,7 +64,7 @@ class ScorpionTrackPortalContext:
     user_id: int | None
     name: str | None
     distance_units: str | None
-    app_api_key: str | None
+    app_api_key: str | None = field(repr=False)
     fms_api_url: str | None
 
 
@@ -234,22 +239,17 @@ class ScorpionTrackVehicleSummary:
 class ScorpionTrackAccountData:
     """The current authenticated account snapshot."""
 
-    email: str
+    email: str = field(repr=False)
     title: str
     user_id: int | None
     distance_units: str | None
-    app_api_key: str | None
-    fms_api_url: str | None
+    app_api_key_available: bool
+    fms_api_available: bool
     vehicles: tuple[ScorpionTrackVehicleSummary, ...]
     total_alerts: int | None
     unread_alerts: int | None
     alerts: tuple[ScorpionTrackAlertSummary, ...]
     fetched_at: datetime
-
-    @property
-    def app_api_key_available(self) -> bool:
-        """Return True if the portal exposed an app API key on the page."""
-        return bool(self.app_api_key)
 
     @property
     def uses_miles(self) -> bool:
@@ -285,6 +285,7 @@ class ScorpionTrackAccountClient:
         self._timeout_seconds = timeout_seconds
         self._authenticated = False
         self._portal_context: ScorpionTrackPortalContext | None = None
+        self._login_lock = asyncio.Lock()
 
     @property
     def email(self) -> str:
@@ -307,6 +308,11 @@ class ScorpionTrackAccountClient:
 
     async def async_login(self, *, force: bool = False) -> None:
         """Authenticate to the ScorpionTrack portal."""
+        async with self._login_lock:
+            await self._async_login(force=force)
+
+    async def _async_login(self, *, force: bool) -> None:
+        """Authenticate while holding the login lock."""
         if self._authenticated and not force:
             _LOGGER.debug(
                 "Reusing existing ScorpionTrack portal session for %s",
@@ -322,7 +328,7 @@ class ScorpionTrackAccountClient:
             force,
         )
 
-        login_status, login_url, login_html = await self._request_text(
+        login_status, _, login_html = await self._request_text(
             "GET", LOGIN_PATH, ajax=False
         )
         csrf_token = _extract_first(_CSRF_TOKEN_RE, login_html)
@@ -330,12 +336,11 @@ class ScorpionTrackAccountClient:
             lowered = login_html.lower()
             _LOGGER.warning(
                 "ScorpionTrack login page for %s did not expose a CSRF token "
-                "(status=%s, final_url=%s, has_login_form=%s, has_password_field=%s)",
+                "(status=%s, has_login_form=%s, has_password_field=%s)",
                 mask_email(self._email),
                 login_status,
-                login_url,
-                'id=\"login_form\"' in lowered,
-                'name=\"pass\"' in lowered,
+                'id="login_form"' in lowered,
+                'name="pass"' in lowered,
             )
             raise ScorpionTrackPortalError(
                 "ScorpionTrack login page did not expose a CSRF token"
@@ -347,18 +352,18 @@ class ScorpionTrackAccountClient:
             "email": self._email,
             "pass": self._password,
         }
-        _, final_url, response_html = await self._request_text(
+        _, _, response_html = await self._request_text(
             "POST",
             LOGIN_POST_PATH,
             data=form_data,
             ajax=False,
+            follow_redirects=False,
         )
 
         if _looks_like_login_error(response_html):
             _LOGGER.warning(
-                "ScorpionTrack rejected the supplied credentials for %s (final_url=%s)",
+                "ScorpionTrack rejected the supplied credentials for %s",
                 mask_email(self._email),
-                final_url,
             )
             raise ScorpionTrackAuthError(
                 "Portal login rejected the supplied credentials"
@@ -395,9 +400,8 @@ class ScorpionTrackAccountClient:
         )
         if _looks_like_login_page(final_url, page_html):
             _LOGGER.warning(
-                "ScorpionTrack vehicle list for %s redirected back to login (final_url=%s)",
+                "ScorpionTrack vehicle list for %s redirected back to login",
                 mask_email(self._email),
-                final_url,
             )
             raise ScorpionTrackAuthError(
                 "Authenticated vehicle list page redirected back to login"
@@ -409,7 +413,9 @@ class ScorpionTrackAccountClient:
             name=_clean_text(user_payload.get("name")),
             distance_units=_clean_text(user_payload.get("distanceUnits")),
             app_api_key=_clean_text(user_payload.get("appApiKey")),
-            fms_api_url=_clean_text(_extract_first(_FMS_API_URL_RE, page_html)),
+            fms_api_url=_validate_fms_api_url(
+                _clean_text(_extract_first(_FMS_API_URL_RE, page_html))
+            ),
         )
 
     async def async_get_vehicles(
@@ -427,7 +433,9 @@ class ScorpionTrackAccountClient:
         )
 
         return tuple(
-            self._parse_vehicle(payload, positions_by_id.get(_coerce_int(payload.get("id"))))
+            self._parse_vehicle(
+                payload, positions_by_id.get(_coerce_int(payload.get("id")))
+            )
             for payload in vehicle_payloads
             if isinstance(payload, dict) and _coerce_int(payload.get("id")) is not None
         )
@@ -465,7 +473,9 @@ class ScorpionTrackAccountClient:
 
         try:
             portal_context = await self._require_portal_context()
-            unread_alert_payloads = await self._async_get_unread_alert_payloads(portal_context)
+            unread_alert_payloads = await self._async_get_unread_alert_payloads(
+                portal_context
+            )
             if not unread_alert_payloads:
                 return 0
 
@@ -478,7 +488,9 @@ class ScorpionTrackAccountClient:
         except ScorpionTrackAuthError:
             await self.async_login(force=True)
             portal_context = await self._require_portal_context()
-            unread_alert_payloads = await self._async_get_unread_alert_payloads(portal_context)
+            unread_alert_payloads = await self._async_get_unread_alert_payloads(
+                portal_context
+            )
             if not unread_alert_payloads:
                 return 0
 
@@ -501,25 +513,30 @@ class ScorpionTrackAccountClient:
     async def _async_build_account_data(self) -> ScorpionTrackAccountData:
         """Build the latest account snapshot."""
         portal_context = await self._require_portal_context()
-        vehicle_payloads = await self._async_get_vehicle_payloads(portal_context, limit=250)
+        vehicle_payloads = await self._async_get_vehicle_payloads(
+            portal_context, limit=250
+        )
         vehicle_ids = [
             vehicle_id
-            for vehicle_id in (_coerce_int(vehicle.get("id")) for vehicle in vehicle_payloads)
+            for vehicle_id in (
+                _coerce_int(vehicle.get("id")) for vehicle in vehicle_payloads
+            )
             if vehicle_id is not None
         ]
 
         try:
             positions_by_id = await self._async_get_map_positions(vehicle_ids)
-        except ScorpionTrackPortalError as err:
+        except ScorpionTrackPortalError:
             _LOGGER.debug(
-                "ScorpionTrack map position fetch failed for %s: %s",
+                "ScorpionTrack map position fetch failed for %s",
                 mask_email(self._email),
-                err,
             )
             positions_by_id = {}
 
         vehicles = tuple(
-            self._parse_vehicle(payload, positions_by_id.get(_coerce_int(payload.get("id"))))
+            self._parse_vehicle(
+                payload, positions_by_id.get(_coerce_int(payload.get("id")))
+            )
             for payload in vehicle_payloads
             if isinstance(payload, dict) and _coerce_int(payload.get("id")) is not None
         )
@@ -531,22 +548,20 @@ class ScorpionTrackAccountClient:
                 portal_context,
                 limit=5,
             )
-        except ScorpionTrackPortalError as err:
+        except ScorpionTrackPortalError:
             _LOGGER.debug(
-                "ScorpionTrack alerts fetch failed for %s: %s",
+                "ScorpionTrack alerts fetch failed for %s",
                 mask_email(self._email),
-                err,
             )
             alerts = ()
             total_alerts = None
 
         try:
             unread_alerts = await self._async_get_unread_alert_count(portal_context)
-        except ScorpionTrackPortalError as err:
+        except ScorpionTrackPortalError:
             _LOGGER.debug(
-                "ScorpionTrack unread alert count fetch failed for %s: %s",
+                "ScorpionTrack unread alert count fetch failed for %s",
                 mask_email(self._email),
-                err,
             )
             unread_alerts = None
 
@@ -560,8 +575,8 @@ class ScorpionTrackAccountClient:
             title=title,
             user_id=portal_context.user_id,
             distance_units=portal_context.distance_units,
-            app_api_key=portal_context.app_api_key,
-            fms_api_url=portal_context.fms_api_url,
+            app_api_key_available=bool(portal_context.app_api_key),
+            fms_api_available=bool(portal_context.fms_api_url),
             vehicles=vehicles,
             total_alerts=total_alerts,
             unread_alerts=unread_alerts,
@@ -605,7 +620,11 @@ class ScorpionTrackAccountClient:
             page_items = _extract_nested_list(vehicle_container)
             vehicles.extend(item for item in page_items if isinstance(item, dict))
 
-            meta = _extract_nested_dict(vehicle_container.get("meta") if isinstance(vehicle_container, dict) else None)
+            meta = _extract_nested_dict(
+                vehicle_container.get("meta")
+                if isinstance(vehicle_container, dict)
+                else None
+            )
             total_pages = _coerce_int(meta.get("total_pages")) if meta else None
             if total_pages is None or page >= total_pages:
                 break
@@ -621,9 +640,8 @@ class ScorpionTrackAccountClient:
         if not vehicle_ids:
             return {}
 
-        path = (
-            f"{CUSTOMER_MAP_POSITIONS_PATH}/0/"
-            + "_".join(str(vehicle_id) for vehicle_id in vehicle_ids)
+        path = f"{CUSTOMER_MAP_POSITIONS_PATH}/0/" + "_".join(
+            str(vehicle_id) for vehicle_id in vehicle_ids
         )
         payload = await self._request_json("GET", path, ajax=True)
         if not isinstance(payload, dict):
@@ -708,7 +726,7 @@ class ScorpionTrackAccountClient:
         alerts = tuple(
             self._parse_alert(item)
             for item in payload.get("data", [])
-            if isinstance(item, dict)
+            if isinstance(item, dict) and _coerce_int(item.get("id")) is not None
         )
         meta = payload.get("meta")
         total = _coerce_int(meta.get("total")) if isinstance(meta, dict) else None
@@ -757,7 +775,9 @@ class ScorpionTrackAccountClient:
                         alerts.append(item)
 
             meta = payload.get("meta")
-            total_pages = _coerce_int(meta.get("total_pages")) if isinstance(meta, dict) else None
+            total_pages = (
+                _coerce_int(meta.get("total_pages")) if isinstance(meta, dict) else None
+            )
             if total_pages is None or page >= total_pages:
                 break
             page += 1
@@ -781,6 +801,7 @@ class ScorpionTrackAccountClient:
         params: dict[str, Any] | None = None,
         data: dict[str, Any] | None = None,
         ajax: bool,
+        follow_redirects: bool = True,
     ) -> tuple[int, str, str]:
         """Request a portal resource and return status, URL, and text."""
         url = self._build_portal_url(path)
@@ -803,7 +824,7 @@ class ScorpionTrackAccountClient:
                     params=params,
                     data=data,
                     headers=headers,
-                    allow_redirects=True,
+                    allow_redirects=follow_redirects,
                 ) as response:
                     text = await response.text()
                     status = response.status
@@ -820,11 +841,10 @@ class ScorpionTrackAccountClient:
             ) from err
         except ClientError as err:
             _LOGGER.warning(
-                "Error contacting the ScorpionTrack portal for %s (%s %s): %s",
+                "Error contacting the ScorpionTrack portal for %s (%s %s)",
                 mask_email(self._email),
                 method,
                 path,
-                err,
             )
             raise ScorpionTrackConnectionError(
                 "Failed to contact the ScorpionTrack portal"
@@ -832,23 +852,23 @@ class ScorpionTrackAccountClient:
 
         if final_url != url:
             _LOGGER.debug(
-                "ScorpionTrack portal request for %s redirected (%s %s -> %s)",
+                "ScorpionTrack portal request for %s redirected (%s %s)",
                 mask_email(self._email),
                 method,
                 path,
-                final_url,
             )
         if status in (401, 403):
             _LOGGER.warning(
-                "ScorpionTrack portal rejected the session for %s (%s %s, status=%s, final_url=%s)",
+                "ScorpionTrack portal rejected the session for %s (%s %s, status=%s)",
                 mask_email(self._email),
                 method,
                 path,
                 status,
-                final_url,
             )
             raise ScorpionTrackAuthError("Portal session was rejected")
-        if status >= 500:
+        if not follow_redirects and status in (302, 303):
+            return status, final_url, text
+        if status in (408, 425, 429) or status >= 500:
             _LOGGER.warning(
                 "ScorpionTrack portal returned HTTP %s for %s (%s %s)",
                 status,
@@ -856,9 +876,18 @@ class ScorpionTrackAccountClient:
                 method,
                 path,
             )
-            raise ScorpionTrackPortalError(
+            raise ScorpionTrackConnectionError(
                 f"Portal returned HTTP {status} for {path}"
             )
+        if status < 200 or status >= 300:
+            _LOGGER.warning(
+                "ScorpionTrack portal rejected request with HTTP %s for %s (%s %s)",
+                status,
+                mask_email(self._email),
+                method,
+                path,
+            )
+            raise ScorpionTrackPortalError(f"Portal returned HTTP {status} for {path}")
 
         return status, final_url, text
 
@@ -883,11 +912,10 @@ class ScorpionTrackAccountClient:
         if _looks_like_login_page(final_url, text) or _looks_like_login_error(text):
             _LOGGER.warning(
                 "ScorpionTrack portal endpoint for %s redirected to login instead of returning JSON "
-                "(%s %s, final_url=%s)",
+                "(%s %s)",
                 mask_email(self._email),
                 method,
                 path,
-                final_url,
             )
             raise ScorpionTrackAuthError(
                 "Portal endpoint redirected to login instead of returning JSON"
@@ -897,11 +925,10 @@ class ScorpionTrackAccountClient:
             return json.loads(text)
         except json.JSONDecodeError as err:
             _LOGGER.warning(
-                "ScorpionTrack portal endpoint for %s returned non-JSON content (%s %s, final_url=%s, text_length=%s)",
+                "ScorpionTrack portal endpoint for %s returned non-JSON content (%s %s, text_length=%s)",
                 mask_email(self._email),
                 method,
                 path,
-                final_url,
                 len(text),
             )
             raise ScorpionTrackPortalError(
@@ -940,7 +967,7 @@ class ScorpionTrackAccountClient:
                     params=params,
                     json=json_data,
                     headers=headers,
-                    allow_redirects=True,
+                    allow_redirects=False,
                 ) as response:
                     text = await response.text()
                     status = response.status
@@ -957,24 +984,15 @@ class ScorpionTrackAccountClient:
             ) from err
         except ClientError as err:
             _LOGGER.warning(
-                "Error contacting the ScorpionTrack fleet API for %s (%s %s): %s",
+                "Error contacting the ScorpionTrack fleet API for %s (%s %s)",
                 mask_email(self._email),
                 method,
                 path,
-                err,
             )
             raise ScorpionTrackConnectionError(
                 "Failed to contact the ScorpionTrack fleet API"
             ) from err
 
-        if final_url != url:
-            _LOGGER.debug(
-                "ScorpionTrack fleet request for %s redirected (%s %s -> %s)",
-                mask_email(self._email),
-                method,
-                path,
-                final_url,
-            )
         if status in (401, 403):
             _LOGGER.warning(
                 "ScorpionTrack fleet API rejected credentials for %s (%s %s, status=%s)",
@@ -984,9 +1002,20 @@ class ScorpionTrackAccountClient:
                 status,
             )
             raise ScorpionTrackAuthError("Fleet API credentials were rejected")
-        if status >= 500:
+        if status in (408, 425, 429) or status >= 500:
             _LOGGER.warning(
                 "ScorpionTrack fleet API returned HTTP %s for %s (%s %s)",
+                status,
+                mask_email(self._email),
+                method,
+                path,
+            )
+            raise ScorpionTrackConnectionError(
+                f"Fleet API returned HTTP {status} for {path}"
+            )
+        if status < 200 or status >= 300:
+            _LOGGER.warning(
+                "ScorpionTrack fleet API rejected request with HTTP %s for %s (%s %s)",
                 status,
                 mask_email(self._email),
                 method,
@@ -1016,6 +1045,9 @@ class ScorpionTrackAccountClient:
             json_data=json_data,
         )
 
+        if not text.strip():
+            return None
+
         try:
             return json.loads(text)
         except json.JSONDecodeError as err:
@@ -1032,11 +1064,23 @@ class ScorpionTrackAccountClient:
 
     def _build_portal_url(self, path: str) -> str:
         """Return a fully qualified portal URL."""
-        return path if path.startswith("http") else urljoin(f"{self._base_url}/", path.lstrip("/"))
+        return (
+            path
+            if path.startswith("http")
+            else urljoin(f"{self._base_url}/", path.lstrip("/"))
+        )
 
     def _build_fms_url(self, base_url: str, path: str) -> str:
         """Return a fully qualified FMS URL."""
-        return path if path.startswith("http") else urljoin(f"{base_url.rstrip('/')}/", path.lstrip("/"))
+        validated_base_url = _validate_fms_api_url(base_url)
+        if validated_base_url is None:
+            raise ScorpionTrackPortalError("FMS API URL is not available")
+
+        parsed_path = urlparse(path)
+        if parsed_path.scheme or parsed_path.netloc:
+            raise ScorpionTrackPortalError("FMS request path must be relative")
+
+        return urljoin(f"{validated_base_url}/", path.lstrip("/"))
 
     def _parse_vehicle(
         self,
@@ -1057,7 +1101,8 @@ class ScorpionTrackAccountClient:
         latest_position = _parse_position(latest_position_data)
         position = _merge_positions(map_position, latest_position)
         raw_state = _clean_text(
-            (position.raw_state if position is not None else None) or vehicle_data.get("state")
+            (position.raw_state if position is not None else None)
+            or vehicle_data.get("state")
         )
         status = (
             position.friendly_state
@@ -1081,7 +1126,9 @@ class ScorpionTrackAccountClient:
                 (position.odometer if position is not None else None)
                 or vehicle_data.get("odometer")
             ),
-            installed_at=_coerce_datetime(vehicle_data.get("installed") or unit_data.get("fitted")),
+            installed_at=_coerce_datetime(
+                vehicle_data.get("installed") or unit_data.get("fitted")
+            ),
             updated_at=_coerce_datetime(vehicle_data.get("timestamp")),
             last_service_date=_coerce_temporal(vehicle_data.get("lastService")),
             mot_due=_coerce_temporal(vehicle_data.get("mot_due")),
@@ -1106,9 +1153,13 @@ class ScorpionTrackAccountClient:
             ewm_enabled=_coerce_bool(vehicle_data.get("ewm_enabled")),
             g_sense_enabled=_coerce_bool(vehicle_data.get("g_sense")),
             privacy_mode_enabled=_coerce_bool(vehicle_data.get("privacy_mode_enabled")),
-            zero_speed_mode_enabled=_coerce_bool(vehicle_data.get("zero_speed_mode_enabled")),
+            zero_speed_mode_enabled=_coerce_bool(
+                vehicle_data.get("zero_speed_mode_enabled")
+            ),
             armed_mode_enabled=_coerce_bool(vehicle_data.get("monitored_mode_enabled")),
-            transport_mode_begin=_coerce_datetime(vehicle_data.get("transport_mode_begin")),
+            transport_mode_begin=_coerce_datetime(
+                vehicle_data.get("transport_mode_begin")
+            ),
             transport_mode_end=_coerce_datetime(vehicle_data.get("transport_mode_end")),
             garage_mode_begin=_coerce_datetime(vehicle_data.get("garage_mode_begin")),
             garage_mode_end=_coerce_datetime(vehicle_data.get("garage_mode_end")),
@@ -1132,12 +1183,16 @@ class ScorpionTrackAccountClient:
 
     def _parse_alert(self, alert_data: dict[str, Any]) -> ScorpionTrackAlertSummary:
         """Convert a raw alert payload into a compact summary."""
+        alert_id = _coerce_int(alert_data.get("id"))
+        if alert_id is None:
+            raise ScorpionTrackPortalError("Alert record did not include a valid ID")
+
         vehicle_data = _extract_nested_dict(alert_data.get("vehicle"))
         details_data = _extract_nested_dict(alert_data.get("details"))
         location_data = _extract_nested_dict(alert_data.get("location"))
 
         return ScorpionTrackAlertSummary(
-            id=int(alert_data["id"]),
+            id=alert_id,
             source=_clean_text(alert_data.get("source")),
             type=_clean_text(alert_data.get("type")),
             severity=_clean_text(alert_data.get("severity")),
@@ -1155,6 +1210,38 @@ class ScorpionTrackAccountClient:
             latitude=_coerce_float(location_data.get("latitude")),
             longitude=_coerce_float(location_data.get("longitude")),
         )
+
+
+def _validate_fms_api_url(value: str | None) -> str | None:
+    """Validate a portal-provided fleet API URL before sending credentials."""
+    if value is None:
+        return None
+
+    parsed = urlparse(value)
+    hostname = (parsed.hostname or "").rstrip(".").lower()
+    try:
+        port = parsed.port
+    except ValueError as err:
+        raise ScorpionTrackPortalError(
+            "Portal supplied an invalid fleet API URL"
+        ) from err
+
+    if (
+        parsed.scheme != "https"
+        or not hostname
+        or not any(
+            hostname == suffix or hostname.endswith(f".{suffix}")
+            for suffix in _TRUSTED_FMS_HOST_SUFFIXES
+        )
+        or parsed.username is not None
+        or parsed.password is not None
+        or port not in (None, 443)
+        or parsed.query
+        or parsed.fragment
+    ):
+        raise ScorpionTrackPortalError("Portal supplied an untrusted fleet API URL")
+
+    return value.rstrip("/")
 
 
 def _clean_text(value: Any) -> str | None:
@@ -1223,13 +1310,19 @@ def _coerce_datetime(value: Any) -> datetime | None:
 
         try:
             if cleaned.endswith("Z"):
-                return datetime.fromisoformat(cleaned.replace("Z", "+00:00")).astimezone(UTC)
+                return datetime.fromisoformat(
+                    cleaned.replace("Z", "+00:00")
+                ).astimezone(UTC)
             if "T" in cleaned:
                 parsed = datetime.fromisoformat(cleaned)
-                return parsed if parsed.tzinfo is not None else parsed.replace(tzinfo=UTC)
+                return (
+                    parsed if parsed.tzinfo is not None else parsed.replace(tzinfo=UTC)
+                )
             if " " in cleaned:
                 parsed = datetime.fromisoformat(cleaned.replace(" ", "T"))
-                return parsed if parsed.tzinfo is not None else parsed.replace(tzinfo=UTC)
+                return (
+                    parsed if parsed.tzinfo is not None else parsed.replace(tzinfo=UTC)
+                )
             if cleaned.isdigit():
                 return datetime.fromtimestamp(int(cleaned), UTC)
         except ValueError:
@@ -1299,7 +1392,9 @@ def _extract_nested_list(value: Any) -> list[dict[str, Any]]:
     return []
 
 
-def _parse_position(position_data: dict[str, Any] | None) -> ScorpionTrackVehiclePosition | None:
+def _parse_position(
+    position_data: dict[str, Any] | None,
+) -> ScorpionTrackVehiclePosition | None:
     """Parse a raw map or FMS position payload."""
     if not isinstance(position_data, dict):
         return None
@@ -1363,15 +1458,27 @@ def _merge_positions(
         return primary
 
     return ScorpionTrackVehiclePosition(
-        latitude=primary.latitude if primary.latitude is not None else fallback.latitude,
-        longitude=primary.longitude if primary.longitude is not None else fallback.longitude,
-        timestamp=primary.timestamp if primary.timestamp is not None else fallback.timestamp,
+        latitude=primary.latitude
+        if primary.latitude is not None
+        else fallback.latitude,
+        longitude=primary.longitude
+        if primary.longitude is not None
+        else fallback.longitude,
+        timestamp=primary.timestamp
+        if primary.timestamp is not None
+        else fallback.timestamp,
         speed=primary.speed if primary.speed is not None else fallback.speed,
-        speed_kmh=primary.speed_kmh if primary.speed_kmh is not None else fallback.speed_kmh,
+        speed_kmh=primary.speed_kmh
+        if primary.speed_kmh is not None
+        else fallback.speed_kmh,
         bearing=primary.bearing if primary.bearing is not None else fallback.bearing,
-        accuracy=primary.accuracy if primary.accuracy is not None else fallback.accuracy,
+        accuracy=primary.accuracy
+        if primary.accuracy is not None
+        else fallback.accuracy,
         address=primary.address or fallback.address,
-        ignition=primary.ignition if primary.ignition is not None else fallback.ignition,
+        ignition=primary.ignition
+        if primary.ignition is not None
+        else fallback.ignition,
         engine=primary.engine if primary.engine is not None else fallback.engine,
         gps_satellites=(
             primary.gps_satellites
@@ -1386,7 +1493,9 @@ def _merge_positions(
             if primary.vehicle_voltage is not None
             else fallback.vehicle_voltage
         ),
-        odometer=primary.odometer if primary.odometer is not None else fallback.odometer,
+        odometer=primary.odometer
+        if primary.odometer is not None
+        else fallback.odometer,
         unit_type=primary.unit_type or fallback.unit_type,
         unit_id=primary.unit_id if primary.unit_id is not None else fallback.unit_id,
         distance_units=primary.distance_units or fallback.distance_units,
@@ -1441,7 +1550,6 @@ def _looks_like_login_page(final_url: str, text: str) -> bool:
 def _looks_like_login_error(text: str) -> bool:
     """Return True when the portal emitted its generic login failure page."""
     lowered = text.lower()
-    return (
-        '<h1 class="u-heading--dark">error</h1>'.lower() in lowered
-        and ("user_model.php" in lowered or "go back to the" in lowered)
+    return '<h1 class="u-heading--dark">error</h1>'.lower() in lowered and (
+        "user_model.php" in lowered or "go back to the" in lowered
     )

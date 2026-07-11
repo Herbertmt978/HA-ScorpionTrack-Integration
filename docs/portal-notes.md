@@ -61,5 +61,9 @@ These are good next targets, but their exact private endpoints still need to be 
 ## Safety Notes
 
 - Treat all write operations as high-trust until their semantics are confirmed.
+- Accept fleet API base URLs only from the authenticated portal bootstrap data, require HTTPS on a Scorpion-owned hostname, and reject credentials, query strings, fragments, and non-standard ports.
+- Never automatically follow the portal credential POST; accept ordinary 302/303 responses without replaying credentials and reject 307/308 redirects.
+- Do not follow redirects on authenticated fleet API requests; this prevents authorization data being forwarded to a different origin.
+- Keep credentials, API keys, full share tokens, upstream response bodies, and upstream exception messages out of logs and Home Assistant error text.
 - Do not expose theft-critical or immobilisation-related actions until the account permissions and portal behaviour are fully understood.
 - Remote immobilisation appears to involve the ScorpionTrack recovery team and should not be assumed to be a normal customer self-service endpoint.

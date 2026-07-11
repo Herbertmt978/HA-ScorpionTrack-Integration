@@ -1,0 +1,68 @@
+name: Python quality
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: python-quality-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Ruff
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.14"
+      - uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
+        with:
+          version: "0.11.28"
+          enable-cache: true
+          cache-suffix: lint
+      - run: uv sync --locked --only-group lint --python 3.14
+      - run: uv run --locked --only-group lint ruff check --output-format=github .
+      - run: uv run --locked --only-group lint ruff format --check --diff .
+
+  test:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Home Assistant 2025.1.0 minimum
+            python-version: "3.12"
+          - name: Home Assistant 2026.7.2 current
+            python-version: "3.14"
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: ${{ matrix.python-version }}
+      - uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
+        with:
+          version: "0.11.28"
+          enable-cache: true
+          cache-suffix: py${{ matrix.python-version }}
+      - name: Install test environment
+        run: uv sync --locked --only-group test --python "${{ matrix.python-version }}"
+      - name: Require full config-flow coverage
+        run: >
+          uv run --locked --only-group test
+          pytest tests/test_config_flow.py
+          --cov=custom_components.scorpiontrack.config_flow
+          --cov-report=term-missing
+          --cov-fail-under=100
+      - name: Run complete suite
+        run: >
+          uv run --locked --only-group test
+          pytest tests
+          --cov=custom_components.scorpiontrack
+          --cov-report=term-missing

@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable
+from typing import override
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -11,14 +12,18 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory, UnitOfSpeed
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from pyscorpiontrack import ScorpionTrackShare, ScorpionTrackVehicle
 
-from .share_api import ScorpionTrackShare, ScorpionTrackVehicle
-from .const import DOMAIN
+from .share_coordinator import (
+    ScorpionTrackShareConfigEntry,
+    ScorpionTrackShareCoordinator,
+)
 from .share_entity import ScorpionTrackEntity, ScorpionTrackShareEntity
+
+PARALLEL_UPDATES = 0
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -127,11 +132,11 @@ SHARE_SENSOR_DESCRIPTIONS: tuple[ScorpionTrackShareSensorDescription, ...] = (
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: ConfigEntry,
+    entry: ScorpionTrackShareConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up ScorpionTrack sensor entities."""
-    coordinator = hass.data[DOMAIN][entry.entry_id]["coordinator"]
+    coordinator = entry.runtime_data
     known_vehicle_ids: set[int] = set()
     share_entities_added = False
 
@@ -176,7 +181,7 @@ class ScorpionTrackSensorEntity(ScorpionTrackEntity, SensorEntity):
 
     def __init__(
         self,
-        coordinator,
+        coordinator: ScorpionTrackShareCoordinator,
         vehicle_id: int,
         description: ScorpionTrackSensorDescription,
     ) -> None:
@@ -187,11 +192,13 @@ class ScorpionTrackSensorEntity(ScorpionTrackEntity, SensorEntity):
         self._attr_name = description.name
 
     @property
+    @override
     def native_value(self) -> object:
         """Return the native sensor value."""
         return self.entity_description.value_fn(self.share, self.vehicle)
 
     @property
+    @override
     def native_unit_of_measurement(self) -> str | None:
         """Return the native unit of measurement."""
         if self.entity_description.unit_fn is None:
@@ -199,13 +206,15 @@ class ScorpionTrackSensorEntity(ScorpionTrackEntity, SensorEntity):
         return self.entity_description.unit_fn(self.share)
 
     @property
+    @override
     def extra_state_attributes(self) -> dict[str, object]:
         """Return extra state attributes."""
-        attributes = self.common_location_attributes()
+        vehicle = self.vehicle
+        attributes = self.common_location_attributes(vehicle)
         attributes["distance_units"] = self.share.distance_units
         if self.entity_description.key == "location":
-            attributes["formatted_location"] = _format_location(self.vehicle)
-            attributes["coordinates"] = _format_coordinates(self.vehicle)
+            attributes["formatted_location"] = _format_location(vehicle)
+            attributes["coordinates"] = _format_coordinates(vehicle)
         return attributes
 
 
@@ -216,7 +225,11 @@ class ScorpionTrackShareSensorEntity(ScorpionTrackShareEntity, SensorEntity):
 
     entity_description: ScorpionTrackShareSensorDescription
 
-    def __init__(self, coordinator, description: ScorpionTrackShareSensorDescription) -> None:
+    def __init__(
+        self,
+        coordinator: ScorpionTrackShareCoordinator,
+        description: ScorpionTrackShareSensorDescription,
+    ) -> None:
         """Initialize the share sensor."""
         super().__init__(coordinator)
         self.entity_description = description
@@ -224,11 +237,13 @@ class ScorpionTrackShareSensorEntity(ScorpionTrackShareEntity, SensorEntity):
         self._attr_name = description.name
 
     @property
+    @override
     def native_value(self) -> object:
         """Return the native sensor value."""
         return self.entity_description.value_fn(self.share)
 
     @property
+    @override
     def extra_state_attributes(self) -> dict[str, object]:
         """Return extra state attributes."""
         return self.share_common_attributes()
@@ -239,10 +254,7 @@ def _format_location(vehicle: ScorpionTrackVehicle) -> str | None:
     if vehicle.position.address:
         return vehicle.position.address
 
-    if (
-        vehicle.position.latitude is not None
-        and vehicle.position.longitude is not None
-    ):
+    if vehicle.position.latitude is not None and vehicle.position.longitude is not None:
         return f"{vehicle.position.latitude:.6f}, {vehicle.position.longitude:.6f}"
 
     return None
@@ -250,9 +262,6 @@ def _format_location(vehicle: ScorpionTrackVehicle) -> str | None:
 
 def _format_coordinates(vehicle: ScorpionTrackVehicle) -> str | None:
     """Return raw coordinates in a compact string form."""
-    if (
-        vehicle.position.latitude is None
-        or vehicle.position.longitude is None
-    ):
+    if vehicle.position.latitude is None or vehicle.position.longitude is None:
         return None
     return f"{vehicle.position.latitude:.6f}, {vehicle.position.longitude:.6f}"
