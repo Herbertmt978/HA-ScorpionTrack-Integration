@@ -1,0 +1,50 @@
+name: Feature request
+description: Suggest an improvement to the HACS custom integration
+title: "[Feature]: "
+body:
+  - type: dropdown
+    id: setup_type
+    attributes:
+      label: Relevant setup type
+      options:
+        - Portal account
+        - Shared-location link
+        - Both
+    validations:
+      required: true
+
+  - type: textarea
+    id: use_case
+    attributes:
+      label: Use case
+      description: Explain the Home Assistant outcome you want, rather than only the proposed implementation.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behaviour
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+
+  - type: textarea
+    id: control_safety
+    attributes:
+      label: Control and privacy considerations
+      description: If this adds a writable control or exposes more portal data, explain the verified endpoint behaviour and privacy impact. Do not include live account or location data.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues and pull requests for this request.
+          required: true
+        - label: I have not included credentials, tokens, identifiers, alert contents, alert screenshots, or location data.
+          required: true

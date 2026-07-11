@@ -375,13 +375,19 @@ def test_transport_errors_do_not_log_credentials_or_authorization(
     session = FakeSession(error=leaked_error)
     client = _client(session, email=email, password=password)
     caplog.set_level(logging.DEBUG, logger=account_api.__name__)
+    internal_ids = ("987654321", "123456789")
+    path = (
+        "/customer/map/getNewVehiclePositions/0/" + "_".join(internal_ids)
+        if request_kind == "portal"
+        else f"/vehicles/{internal_ids[0]}"
+    )
 
     with pytest.raises(ScorpionTrackConnectionError):
         if request_kind == "portal":
             asyncio.run(
                 client._request_text(
                     "POST",
-                    "/login",
+                    path,
                     data={"email": email, "pass": password},
                     ajax=False,
                 )
@@ -391,7 +397,7 @@ def test_transport_errors_do_not_log_credentials_or_authorization(
                 client._request_fms_text(
                     _portal_context(api_key=api_key),
                     "POST",
-                    "/vehicles",
+                    path,
                     json_data={"value": "safe"},
                 )
             )
@@ -407,3 +413,38 @@ def test_transport_errors_do_not_log_credentials_or_authorization(
     assert api_key not in logged
     assert authorization not in logged
     assert "authorization" not in logged.lower()
+    assert all(internal_id not in logged for internal_id in internal_ids)
+    assert "<id>" in logged
+
+
+@pytest.mark.parametrize("request_kind", ["portal", "fms"])
+def test_http_errors_redact_internal_path_identifiers(
+    request_kind: str, caplog: pytest.LogCaptureFixture
+) -> None:
+    """HTTP failure logs and errors must redact dynamic account endpoint IDs."""
+    internal_ids = ("987654321", "123456789")
+    path = (
+        "/customer/map/getNewVehiclePositions/0/" + "_".join(internal_ids)
+        if request_kind == "portal"
+        else f"/vehicles/{internal_ids[0]}"
+    )
+    client = _client(FakeSession(status=500))
+    caplog.set_level(logging.WARNING, logger=account_api.__name__)
+
+    with pytest.raises(ScorpionTrackConnectionError) as raised:
+        if request_kind == "portal":
+            asyncio.run(client._request_text("GET", path, ajax=True))
+        else:
+            asyncio.run(client._request_fms_text(_portal_context(), "GET", path))
+
+    logged = "\n".join(
+        record.getMessage()
+        for record in caplog.records
+        if record.name == account_api.__name__
+    )
+    error_text = str(raised.value)
+    for internal_id in internal_ids:
+        assert internal_id not in logged
+        assert internal_id not in error_text
+    assert "<id>" in logged
+    assert "<id>" in error_text

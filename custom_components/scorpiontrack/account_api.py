@@ -33,6 +33,7 @@ _PORTAL_USER_JSON_RE = re.compile(
     r"window\.ScorpionData\.user\s*=\s*(\{.*?\});",
     re.DOTALL,
 )
+_NUMERIC_PATH_SEGMENT_RE = re.compile(r"(?<=/)\d+(?:_\d+)*(?=/|$)")
 _TRUSTED_FMS_HOST_SUFFIXES = (
     "scorpionauto.com",
     "scorpiontrack.co.uk",
@@ -373,9 +374,8 @@ class ScorpionTrackAccountClient:
         if not portal_context.app_api_key or not portal_context.fms_api_url:
             _LOGGER.warning(
                 "ScorpionTrack portal login for %s completed but the authenticated page was "
-                "missing expected API details (user_id=%s, has_app_api_key=%s, has_fms_api_url=%s)",
+                "missing expected API details (has_app_api_key=%s, has_fms_api_url=%s)",
                 mask_email(self._email),
-                portal_context.user_id,
                 bool(portal_context.app_api_key),
                 bool(portal_context.fms_api_url),
             )
@@ -386,9 +386,8 @@ class ScorpionTrackAccountClient:
         self._portal_context = portal_context
         self._authenticated = True
         _LOGGER.debug(
-            "Authenticated ScorpionTrack portal session for %s (user_id=%s)",
+            "Authenticated ScorpionTrack portal session for %s",
             mask_email(self._email),
-            portal_context.user_id,
         )
 
     async def async_get_portal_context(self) -> ScorpionTrackPortalContext:
@@ -805,6 +804,7 @@ class ScorpionTrackAccountClient:
     ) -> tuple[int, str, str]:
         """Request a portal resource and return status, URL, and text."""
         url = self._build_portal_url(path)
+        safe_path = _sanitize_request_path(path)
         headers = {
             "Referer": f"{self._base_url}/",
             "Accept": (
@@ -834,7 +834,7 @@ class ScorpionTrackAccountClient:
                 "Timed out contacting the ScorpionTrack portal for %s (%s %s)",
                 mask_email(self._email),
                 method,
-                path,
+                safe_path,
             )
             raise ScorpionTrackConnectionError(
                 "Timed out contacting the ScorpionTrack portal"
@@ -844,7 +844,7 @@ class ScorpionTrackAccountClient:
                 "Error contacting the ScorpionTrack portal for %s (%s %s)",
                 mask_email(self._email),
                 method,
-                path,
+                safe_path,
             )
             raise ScorpionTrackConnectionError(
                 "Failed to contact the ScorpionTrack portal"
@@ -855,14 +855,14 @@ class ScorpionTrackAccountClient:
                 "ScorpionTrack portal request for %s redirected (%s %s)",
                 mask_email(self._email),
                 method,
-                path,
+                safe_path,
             )
         if status in (401, 403):
             _LOGGER.warning(
                 "ScorpionTrack portal rejected the session for %s (%s %s, status=%s)",
                 mask_email(self._email),
                 method,
-                path,
+                safe_path,
                 status,
             )
             raise ScorpionTrackAuthError("Portal session was rejected")
@@ -874,10 +874,10 @@ class ScorpionTrackAccountClient:
                 status,
                 mask_email(self._email),
                 method,
-                path,
+                safe_path,
             )
             raise ScorpionTrackConnectionError(
-                f"Portal returned HTTP {status} for {path}"
+                f"Portal returned HTTP {status} for {safe_path}"
             )
         if status < 200 or status >= 300:
             _LOGGER.warning(
@@ -885,9 +885,11 @@ class ScorpionTrackAccountClient:
                 status,
                 mask_email(self._email),
                 method,
-                path,
+                safe_path,
             )
-            raise ScorpionTrackPortalError(f"Portal returned HTTP {status} for {path}")
+            raise ScorpionTrackPortalError(
+                f"Portal returned HTTP {status} for {safe_path}"
+            )
 
         return status, final_url, text
 
@@ -901,6 +903,7 @@ class ScorpionTrackAccountClient:
         ajax: bool = True,
     ) -> Any:
         """Request a JSON portal endpoint."""
+        safe_path = _sanitize_request_path(path)
         _, final_url, text = await self._request_text(
             method,
             path,
@@ -915,7 +918,7 @@ class ScorpionTrackAccountClient:
                 "(%s %s)",
                 mask_email(self._email),
                 method,
-                path,
+                safe_path,
             )
             raise ScorpionTrackAuthError(
                 "Portal endpoint redirected to login instead of returning JSON"
@@ -928,11 +931,11 @@ class ScorpionTrackAccountClient:
                 "ScorpionTrack portal endpoint for %s returned non-JSON content (%s %s, text_length=%s)",
                 mask_email(self._email),
                 method,
-                path,
+                safe_path,
                 len(text),
             )
             raise ScorpionTrackPortalError(
-                f"Portal returned non-JSON content for {path}"
+                f"Portal returned non-JSON content for {safe_path}"
             ) from err
 
     async def _request_fms_text(
@@ -954,6 +957,7 @@ class ScorpionTrackAccountClient:
             portal_context.app_api_key.encode("utf-8")
         ).decode("ascii")
         url = self._build_fms_url(portal_context.fms_api_url, path)
+        safe_path = _sanitize_request_path(path)
         headers = {
             "Accept": "application/json, text/javascript, */*; q=0.01",
             "Authorization": authorization,
@@ -977,7 +981,7 @@ class ScorpionTrackAccountClient:
                 "Timed out contacting the ScorpionTrack fleet API for %s (%s %s)",
                 mask_email(self._email),
                 method,
-                path,
+                safe_path,
             )
             raise ScorpionTrackConnectionError(
                 "Timed out contacting the ScorpionTrack fleet API"
@@ -987,7 +991,7 @@ class ScorpionTrackAccountClient:
                 "Error contacting the ScorpionTrack fleet API for %s (%s %s)",
                 mask_email(self._email),
                 method,
-                path,
+                safe_path,
             )
             raise ScorpionTrackConnectionError(
                 "Failed to contact the ScorpionTrack fleet API"
@@ -998,7 +1002,7 @@ class ScorpionTrackAccountClient:
                 "ScorpionTrack fleet API rejected credentials for %s (%s %s, status=%s)",
                 mask_email(self._email),
                 method,
-                path,
+                safe_path,
                 status,
             )
             raise ScorpionTrackAuthError("Fleet API credentials were rejected")
@@ -1008,10 +1012,10 @@ class ScorpionTrackAccountClient:
                 status,
                 mask_email(self._email),
                 method,
-                path,
+                safe_path,
             )
             raise ScorpionTrackConnectionError(
-                f"Fleet API returned HTTP {status} for {path}"
+                f"Fleet API returned HTTP {status} for {safe_path}"
             )
         if status < 200 or status >= 300:
             _LOGGER.warning(
@@ -1019,10 +1023,10 @@ class ScorpionTrackAccountClient:
                 status,
                 mask_email(self._email),
                 method,
-                path,
+                safe_path,
             )
             raise ScorpionTrackPortalError(
-                f"Fleet API returned HTTP {status} for {path}"
+                f"Fleet API returned HTTP {status} for {safe_path}"
             )
 
         return status, final_url, text
@@ -1037,6 +1041,7 @@ class ScorpionTrackAccountClient:
         json_data: dict[str, Any] | None = None,
     ) -> Any:
         """Request a JSON FMS endpoint."""
+        safe_path = _sanitize_request_path(path)
         _, _, text = await self._request_fms_text(
             portal_context,
             method,
@@ -1055,11 +1060,11 @@ class ScorpionTrackAccountClient:
                 "ScorpionTrack fleet API returned non-JSON content for %s (%s %s, text_length=%s)",
                 mask_email(self._email),
                 method,
-                path,
+                safe_path,
                 len(text),
             )
             raise ScorpionTrackPortalError(
-                f"Fleet API returned non-JSON content for {path}"
+                f"Fleet API returned non-JSON content for {safe_path}"
             ) from err
 
     def _build_portal_url(self, path: str) -> str:
@@ -1210,6 +1215,13 @@ class ScorpionTrackAccountClient:
             latitude=_coerce_float(location_data.get("latitude")),
             longitude=_coerce_float(location_data.get("longitude")),
         )
+
+
+def _sanitize_request_path(value: str) -> str:
+    """Return an endpoint path without query data or numeric identifiers."""
+    parsed = urlparse(value)
+    path = parsed.path or "/"
+    return _NUMERIC_PATH_SEGMENT_RE.sub("<id>", path)
 
 
 def _validate_fms_api_url(value: str | None) -> str | None:
