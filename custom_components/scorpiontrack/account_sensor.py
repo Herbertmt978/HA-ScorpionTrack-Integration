@@ -30,6 +30,7 @@ from .account_coordinator import (
     ScorpionTrackAccountCoordinator,
 )
 from .account_entity import ScorpionTrackAccountEntity, ScorpionTrackVehicleEntity
+from .const import convert_speed
 
 PARALLEL_UPDATES = 0
 
@@ -456,12 +457,21 @@ class ScorpionTrackVehicleSensorEntity(ScorpionTrackVehicleEntity, SensorEntity)
     @override
     def native_value(self) -> object:
         """Return the native sensor value."""
+        if self.entity_description.key == "speed":
+            position = self.vehicle.position
+            return convert_speed(
+                position.speed_kmh if position is not None else None,
+                self.coordinator.speed_unit,
+                precision=2,
+            )
         return self.entity_description.value_fn(self.account, self.vehicle)
 
     @property
     @override
     def native_unit_of_measurement(self) -> str | None:
         """Return the native unit of measurement."""
+        if self.entity_description.key == "speed":
+            return self.coordinator.speed_unit
         if self.entity_description.unit_fn is None:
             return None
         return self.entity_description.unit_fn(self.account, self.vehicle)

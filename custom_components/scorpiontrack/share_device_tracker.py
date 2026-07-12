@@ -9,6 +9,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from pyscorpiontrack import ScorpionTrackVehicle
 
+from .const import convert_speed
 from .share_coordinator import (
     ScorpionTrackShareConfigEntry,
     ScorpionTrackShareCoordinator,
@@ -100,12 +101,13 @@ class ScorpionTrackTrackerEntity(ScorpionTrackEntity, TrackerEntity):
             return {}
 
         position = vehicle.position
-        converted_speed = self.share.convert_speed(position.speed_kmh)
+        speed_unit = self.coordinator.speed_unit
+        converted_speed = convert_speed(position.speed_kmh, speed_unit)
         attributes = self.common_location_attributes(vehicle)
         attributes.update(
             {
                 "speed": converted_speed,
-                "speed_unit": "mph" if self.share.uses_miles else "km/h",
+                "speed_unit": speed_unit,
                 "speed_kmh": position.speed_kmh,
                 "distance_units": self.share.distance_units,
             }

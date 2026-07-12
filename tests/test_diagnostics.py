@@ -117,6 +117,26 @@ async def test_legacy_core_share_entry_diagnostics(
     assert "legacy-core-share-token" not in json.dumps(diagnostics)
 
 
+async def test_hybrid_diagnostics_report_share_health_without_token(
+    hass: HomeAssistant,
+    hybrid_account_config_entry: MockConfigEntry,
+) -> None:
+    """Hybrid diagnostics should expose feed health but no share identity."""
+    await setup_integration(hass, hybrid_account_config_entry)
+
+    diagnostics = await async_get_config_entry_diagnostics(
+        hass, hybrid_account_config_entry
+    )
+    serialized = json.dumps(diagnostics)
+
+    assert diagnostics["hybrid_share"] == {
+        "last_update_success": True,
+        "last_exception_type": None,
+        "matched_vehicle_count": 1,
+    }
+    assert "canonical-token" not in serialized
+
+
 async def test_diagnostics_expose_exception_type_without_message(
     hass: HomeAssistant,
     share_config_entry: MockConfigEntry,

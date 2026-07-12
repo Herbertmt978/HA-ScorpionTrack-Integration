@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 from types import SimpleNamespace
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from homeassistant import loader
@@ -95,6 +96,38 @@ async def test_core_share_entry_without_setup_type_is_compatible(
 
     assert entry.state is ConfigEntryState.LOADED
     assert isinstance(entry.runtime_data, ScorpionTrackShareCoordinator)
+
+
+async def test_hybrid_account_uses_fast_share_coordinator_interval(
+    hass: HomeAssistant,
+    hybrid_account_config_entry: MockConfigEntry,
+    client_mocks: SimpleNamespace,
+) -> None:
+    """A hybrid entry should initialize both sources on a two-minute cadence."""
+    await setup_integration(hass, hybrid_account_config_entry)
+
+    coordinator = hybrid_account_config_entry.runtime_data
+    assert isinstance(coordinator, ScorpionTrackAccountCoordinator)
+    assert coordinator.update_interval.total_seconds() == 120
+    client_mocks.account.async_refresh_account.assert_awaited_once()
+    client_mocks.share.async_get_share.assert_awaited_once()
+
+
+async def test_options_update_reloads_entry(
+    hass: HomeAssistant,
+    account_config_entry: MockConfigEntry,
+) -> None:
+    """Changing speed/share options should reload the active entry."""
+    with patch.object(
+        hass.config_entries,
+        "async_reload",
+        AsyncMock(return_value=True),
+    ) as reload_entry:
+        from custom_components.scorpiontrack import _async_reload_entry
+
+        await _async_reload_entry(hass, account_config_entry)
+
+    reload_entry.assert_awaited_once_with(account_config_entry.entry_id)
 
 
 async def test_unknown_entry_type_fails_cleanly(hass: HomeAssistant) -> None:

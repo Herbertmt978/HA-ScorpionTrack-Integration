@@ -36,9 +36,9 @@ Because this repository overrides a built-in domain, HACS cannot list it in the 
 | Concern | Behaviour |
 | --- | --- |
 | Minimum Home Assistant version | 2025.1.0 |
-| Data stored by Home Assistant | Portal email and password, or a shared-location token |
+| Data stored by Home Assistant | Portal email and password, a shared-location token, or both for hybrid mode |
 | Network access | ScorpionTrack cloud and portal endpoints |
-| Polling | Shared links every 2 minutes; portal accounts every 5 minutes |
+| Polling | Shared links every 2 minutes; portal accounts every 5 minutes; hybrid account live data every 2 minutes |
 | Telemetry | No separate analytics or telemetry |
 | Writable actions | Mark alerts read, Privacy Mode, and Zero-Speed Mode only |
 | Reversibility | Back up first and follow the rollback or removal steps below |
@@ -84,11 +84,13 @@ After restarting Home Assistant:
 
 Setup performs an initial refresh. Later refreshes run every 2 minutes for shared links and every 5 minutes for portal accounts.
 
+Speed can be displayed as `mph` or `km/h`. Choose the unit during setup or change it later from the config entry's `Configure` options.
+
 ## Setup
 
 ### Portal account
 
-Choose `Portal account` for the fuller authenticated integration. Enter the email address and password used for the ScorpionTrack portal.
+Choose `Portal account` for the fuller authenticated integration. Enter the email address and password used for the ScorpionTrack portal. You may also paste a shared-location URL or token during setup to create one hybrid entry.
 
 Portal-account mode provides:
 
@@ -98,6 +100,18 @@ Portal-account mode provides:
 - vehicle sensors including `Status`, `Location`, `Speed`, `Heading`, `Odometer`, `Battery Voltage`, `Fuel Type`, `Battery Type`, `Unit Make`, and `MOT Due`
 - binary sensors including `Ignition`, `Engine`, `Armed Mode Enabled`, `EWM Enabled`, `Driver Module Fitted`, `G-Sense Enabled`, and `Location Stale`
 - verified switches for `Privacy Mode` and `Zero-Speed Mode`
+
+### Faster live data for portal accounts
+
+The portal account feed can return location data less frequently than Home Assistant polls it. To retain account alerts and controls while receiving newer live vehicle data:
+
+1. Create a ScorpionTrack location share containing the same vehicle or vehicles.
+2. Open the ScorpionTrack config entry and select `Configure`.
+3. Paste the share URL or token, choose `mph` or `km/h`, and save.
+
+Hybrid mode continues to refresh authenticated account data every 5 minutes. It refreshes the optional share every 2 minutes and overlays only a position that is at least as recent as the account position. Vehicle IDs are matched first, with a unique normalized registration as a fallback. Location, speed, heading, ignition, and derived status can therefore update faster without duplicating account devices or entities.
+
+If the optional share temporarily fails, the entry remains available, retains its last newer live position, and continues using portal data for account metadata and controls. Remove the share from `Configure` to return to account-only polling.
 
 `Armed Mode` remains read-only because the current portal endpoint reports it but does not reliably accept a true toggle.
 
@@ -117,9 +131,13 @@ One share can contain multiple vehicles. Shared-link mode provides:
 - binary sensors such as `Ignition` and `Location Stale`
 - share sensors such as `Share Title`, `Shared By`, `Share Created`, and `Share Expires`
 
+Choose `mph` or `km/h` during setup, or change it later from the config entry's `Configure` options.
+
 ## Entity behaviour
 
 Vehicle coordinates are published by the `device_tracker`. Related sensors use readable location text and non-map attributes, so each vehicle produces one map marker instead of several.
+
+Changing the speed-unit option reloads the config entry and updates every speed sensor (and share-tracker speed attribute) without changing entity IDs.
 
 Alert coordinates use alert-specific attribute names rather than generic `latitude` and `longitude` attributes. This prevents alert sensors from appearing as additional vehicle markers.
 

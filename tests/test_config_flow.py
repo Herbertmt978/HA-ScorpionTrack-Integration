@@ -224,6 +224,185 @@ async def test_account_flow_creates_entry(
     client_mocks.account.async_refresh_account.assert_awaited_once()
 
 
+async def test_account_flow_offers_share_and_speed_options(
+    hass: HomeAssistant,
+) -> None:
+    """Account setup should offer an optional fast share feed and speed unit."""
+    result = await _async_start_route(hass, "account")
+
+    schema_keys = {marker.schema for marker in result["data_schema"].schema}
+    assert {CONF_EMAIL, CONF_PASSWORD, "share_token", "speed_unit"}.issubset(
+        schema_keys
+    )
+
+
+async def test_account_flow_creates_hybrid_entry(
+    hass: HomeAssistant,
+    client_mocks: SimpleNamespace,
+) -> None:
+    """Valid credentials and a share should create one hybrid account entry."""
+    result = await _async_start_route(hass, "account")
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {
+            CONF_EMAIL: "owner@example.com",
+            CONF_PASSWORD: "correct-password",
+            CONF_SHARE_TOKEN: "canonical-token",
+            "speed_unit": "km/h",
+        },
+    )
+
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["data"] == {
+        CONF_SETUP_TYPE: SETUP_TYPE_ACCOUNT,
+        CONF_EMAIL: "owner@example.com",
+        CONF_PASSWORD: "correct-password",
+    }
+    assert result["options"] == {
+        CONF_SHARE_TOKEN: "canonical-token",
+        "speed_unit": "km/h",
+    }
+    client_mocks.account.async_refresh_account.assert_awaited_once()
+    client_mocks.share.async_get_share.assert_awaited_once()
+
+
+@pytest.mark.parametrize(
+    ("side_effect", "expected_error"),
+    [
+        (ScorpionTrackShareConnectionError("connection failed"), "cannot_connect"),
+        (ScorpionTrackInvalidTokenError("invalid token"), "invalid_token"),
+        (
+            ScorpionTrackShareUnavailableError("share unavailable"),
+            "share_unavailable",
+        ),
+        (Exception("unexpected"), "unknown"),
+    ],
+)
+async def test_account_flow_maps_optional_share_errors(
+    hass: HomeAssistant,
+    client_mocks: SimpleNamespace,
+    side_effect: Exception,
+    expected_error: str,
+) -> None:
+    """A bad optional share should not create a partially configured account."""
+    client_mocks.share.async_get_share.side_effect = side_effect
+    result = await _async_start_route(hass, "account")
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {
+            CONF_EMAIL: "owner@example.com",
+            CONF_PASSWORD: "correct-password",
+            CONF_SHARE_TOKEN: "canonical-token",
+            "speed_unit": "mph",
+        },
+    )
+
+    assert result["type"] is FlowResultType.FORM
+    assert result["errors"] == {"base": expected_error}
+
+
+async def test_account_options_validate_share_and_update_speed_unit(
+    hass: HomeAssistant,
+    account_config_entry: MockConfigEntry,
+    client_mocks: SimpleNamespace,
+) -> None:
+    """Account options should add the share feed and change speed units."""
+    account_config_entry.add_to_hass(hass)
+
+    result = await hass.config_entries.options.async_init(account_config_entry.entry_id)
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "init"
+
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        {
+            CONF_SHARE_TOKEN: "canonical-token",
+            "speed_unit": "km/h",
+        },
+    )
+
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert account_config_entry.options == {
+        CONF_SHARE_TOKEN: "canonical-token",
+        "speed_unit": "km/h",
+    }
+    client_mocks.share.async_get_share.assert_awaited_once()
+
+
+@pytest.mark.parametrize(
+    ("side_effect", "expected_error"),
+    [
+        (ScorpionTrackShareConnectionError("connection failed"), "cannot_connect"),
+        (ScorpionTrackInvalidTokenError("invalid token"), "invalid_token"),
+        (
+            ScorpionTrackShareUnavailableError("share unavailable"),
+            "share_unavailable",
+        ),
+        (Exception("unexpected"), "unknown"),
+    ],
+)
+async def test_account_options_map_share_errors(
+    hass: HomeAssistant,
+    account_config_entry: MockConfigEntry,
+    client_mocks: SimpleNamespace,
+    side_effect: Exception,
+    expected_error: str,
+) -> None:
+    """Account options should retain the form when share validation fails."""
+    account_config_entry.add_to_hass(hass)
+    client_mocks.share.async_get_share.side_effect = side_effect
+    result = await hass.config_entries.options.async_init(account_config_entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        {CONF_SHARE_TOKEN: "canonical-token", "speed_unit": "mph"},
+    )
+
+    assert result["type"] is FlowResultType.FORM
+    assert result["errors"] == {"base": expected_error}
+
+
+async def test_account_options_can_remove_share(
+    hass: HomeAssistant,
+    hybrid_account_config_entry: MockConfigEntry,
+) -> None:
+    """Clearing the optional share should restore account-only polling."""
+    hybrid_account_config_entry.add_to_hass(hass)
+    result = await hass.config_entries.options.async_init(
+        hybrid_account_config_entry.entry_id
+    )
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        {CONF_SHARE_TOKEN: "", "speed_unit": "mph"},
+    )
+
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert hybrid_account_config_entry.options == {
+        CONF_SHARE_TOKEN: "",
+        "speed_unit": "mph",
+    }
+
+
+async def test_share_options_update_speed_unit_without_reentering_token(
+    hass: HomeAssistant,
+    share_config_entry: MockConfigEntry,
+) -> None:
+    """Share entries should expose only their display speed preference."""
+    share_config_entry.add_to_hass(hass)
+
+    result = await hass.config_entries.options.async_init(share_config_entry.entry_id)
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "init"
+    schema_keys = {marker.schema for marker in result["data_schema"].schema}
+    assert schema_keys == {"speed_unit"}
+
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {"speed_unit": "km/h"}
+    )
+
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert share_config_entry.options == {"speed_unit": "km/h"}
+
+
 async def test_account_flow_uses_hashed_email_without_user_id(
     hass: HomeAssistant,
     client_mocks: SimpleNamespace,

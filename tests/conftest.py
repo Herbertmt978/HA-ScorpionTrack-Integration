@@ -217,6 +217,26 @@ def account_config_entry() -> MockConfigEntry:
 
 
 @pytest.fixture
+def hybrid_account_config_entry() -> MockConfigEntry:
+    """Return an account entry enhanced by a shared-location feed."""
+    return MockConfigEntry(
+        domain=DOMAIN,
+        title="ScorpionTrack (Owner)",
+        data={
+            CONF_SETUP_TYPE: SETUP_TYPE_ACCOUNT,
+            CONF_EMAIL: "owner@example.com",
+            CONF_PASSWORD: "correct-password",
+        },
+        options={
+            "share_token": "canonical-token",
+            "speed_unit": "km/h",
+        },
+        unique_id="account_42",
+        entry_id="01SCORPIONTRACK_HYBRID_TEST",
+    )
+
+
+@pytest.fixture
 def client_mocks(mock_clients: SimpleNamespace) -> SimpleNamespace:
     """Expose the mocked clients to tests."""
     return mock_clients
