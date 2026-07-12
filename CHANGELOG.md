@@ -4,7 +4,16 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
-No changes yet.
+### Added
+
+- Selectable `mph` or `km/h` speed units for portal-account and shared-link entries.
+- Optional hybrid authentication that combines a portal account with a validated shared-location link in one config entry.
+- Privacy-safe hybrid diagnostics for share health and matched-vehicle counts.
+
+### Changed
+
+- Hybrid entries now refresh live share positions every 2 minutes while retaining the 5-minute portal-account cadence for alerts, metadata, and controls.
+- Newer share positions update the existing account tracker and live sensors without changing deployed entity IDs; temporary share failures retain the last newer live position while portal metadata and controls continue.
 
 ## 0.2.1 - 2026-07-11
 

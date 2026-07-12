@@ -63,4 +63,4 @@ class ScorpionTrackMarkAlertsReadButton(ScorpionTrackAccountEntity, ButtonEntity
                 translation_key="mark_alerts_read_failed",
             ) from err
 
-        await self.coordinator.async_request_refresh()
+        await self.coordinator.async_request_account_refresh()

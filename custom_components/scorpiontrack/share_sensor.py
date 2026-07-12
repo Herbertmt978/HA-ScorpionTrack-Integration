@@ -17,6 +17,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from pyscorpiontrack import ScorpionTrackShare, ScorpionTrackVehicle
 
+from .const import convert_speed
 from .share_coordinator import (
     ScorpionTrackShareConfigEntry,
     ScorpionTrackShareCoordinator,
@@ -195,12 +196,19 @@ class ScorpionTrackSensorEntity(ScorpionTrackEntity, SensorEntity):
     @override
     def native_value(self) -> object:
         """Return the native sensor value."""
+        if self.entity_description.key == "speed":
+            return convert_speed(
+                self.vehicle.position.speed_kmh,
+                self.coordinator.speed_unit,
+            )
         return self.entity_description.value_fn(self.share, self.vehicle)
 
     @property
     @override
     def native_unit_of_measurement(self) -> str | None:
         """Return the native unit of measurement."""
+        if self.entity_description.key == "speed":
+            return self.coordinator.speed_unit
         if self.entity_description.unit_fn is None:
             return None
         return self.entity_description.unit_fn(self.share)

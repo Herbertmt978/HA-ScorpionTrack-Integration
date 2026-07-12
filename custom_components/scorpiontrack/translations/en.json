@@ -12,17 +12,23 @@
       },
       "account": {
         "title": "Add portal account",
-        "description": "Enter your ScorpionTrack portal credentials. Account mode exposes the fuller set of trackers, sensors, and verified switches.",
+        "description": "Enter your ScorpionTrack portal credentials. You can also add a shared-location link for faster live position updates while retaining account sensors and controls.",
         "data": {
           "email": "Email",
-          "password": "Password"
+          "password": "Password",
+          "share_token": "Share URL or token (optional)",
+          "speed_unit": "Speed unit"
+        },
+        "data_description": {
+          "share_token": "Optional: add a share containing the same vehicle(s) to refresh live location, speed, heading, ignition, and status every two minutes."
         }
       },
       "share": {
         "title": "Add shared location",
         "description": "Paste either the full ScorpionTrack shared-location URL or just the token from it. A single share can include multiple vehicles.",
         "data": {
-          "share_token": "Share URL or token"
+          "share_token": "Share URL or token",
+          "speed_unit": "Speed unit"
         },
         "data_description": {
           "share_token": "Paste the full ScorpionTrack shared-location URL or just the token itself."
@@ -48,6 +54,21 @@
     "abort": {
       "already_configured": "This ScorpionTrack source is already configured.",
       "reauth_successful": "Your ScorpionTrack credentials have been updated."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "ScorpionTrack options",
+        "description": "Choose how speed is displayed. Portal-account entries can also add, replace, or remove an optional shared-location feed for faster live updates.",
+        "data": {
+          "share_token": "Share URL or token (optional)",
+          "speed_unit": "Speed unit"
+        },
+        "data_description": {
+          "share_token": "Leave blank to use portal-account data only. The share should contain the same vehicle(s) as the account."
+        }
+      }
     }
   },
   "exceptions": {

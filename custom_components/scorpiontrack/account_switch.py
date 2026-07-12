@@ -149,7 +149,7 @@ class ScorpionTrackVehicleSwitchEntity(ScorpionTrackVehicleEntity, SwitchEntity)
                 },
             ) from err
 
-        await self.coordinator.async_request_refresh()
+        await self.coordinator.async_request_account_refresh()
 
     @property
     @override

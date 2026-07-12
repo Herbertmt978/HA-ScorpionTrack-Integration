@@ -18,7 +18,7 @@ from pyscorpiontrack import (
     ScorpionTrackVehicle,
 )
 
-from .const import DOMAIN, SHARE_SCAN_INTERVAL
+from .const import DOMAIN, SHARE_SCAN_INTERVAL, get_speed_unit
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -37,6 +37,7 @@ class ScorpionTrackShareCoordinator(DataUpdateCoordinator[ScorpionTrackShare]):
     ) -> None:
         """Initialize the coordinator."""
         self.client = client
+        self.entry = entry
         self.vehicles_by_id: dict[int, ScorpionTrackVehicle] = {}
         super().__init__(
             hass,
@@ -44,6 +45,16 @@ class ScorpionTrackShareCoordinator(DataUpdateCoordinator[ScorpionTrackShare]):
             config_entry=entry,
             name=f"{DOMAIN}_{entry.entry_id}",
             update_interval=SHARE_SCAN_INTERVAL,
+        )
+
+    @property
+    def speed_unit(self) -> str:
+        """Return the configured unit for speed entities."""
+        share = self.data
+        return get_speed_unit(
+            self.entry.data,
+            self.entry.options,
+            uses_miles=share.uses_miles if share is not None else False,
         )
 
     @override

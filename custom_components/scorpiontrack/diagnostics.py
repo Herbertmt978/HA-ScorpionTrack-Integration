@@ -66,5 +66,11 @@ async def async_get_config_entry_diagnostics(
             "total_alerts": coordinator.data.total_alerts,
             "unread_alerts": coordinator.data.unread_alerts,
         }
+        if coordinator.share_client is not None:
+            diagnostics["hybrid_share"] = {
+                "last_update_success": coordinator.share_last_update_success,
+                "last_exception_type": coordinator.share_last_exception_type,
+                "matched_vehicle_count": coordinator.matched_share_vehicle_count,
+            }
 
     return diagnostics
