@@ -236,6 +236,7 @@ async def test_hybrid_share_with_incomplete_coordinates_preserves_account_locati
         longitude=longitude,
         timestamp=datetime.now(UTC),
         speed_kmh=80.0,
+        address="Incomplete share address",
     )
     client_mocks.share.async_get_share.return_value = replace(
         mock_share,
@@ -249,6 +250,16 @@ async def test_hybrid_share_with_incomplete_coordinates_preserves_account_locati
     assert tracker is not None
     assert tracker.attributes["latitude"] == 51.5074
     assert tracker.attributes["longitude"] == -0.1278
+    assert tracker.attributes["address"] == "Westminster, London"
+    assert tracker.attributes["formatted_location"] == "Westminster, London"
+
+    location_id = _entity_id(entity_registry, "sensor", "42_2001_location")
+    location = hass.states.get(location_id)
+    assert location is not None
+    assert location.state == "Westminster, London"
+    assert location.attributes["address"] == "Westminster, London"
+    assert location.attributes["formatted_location"] == "Westminster, London"
+    assert location.attributes["coordinates"] == "51.507400, -0.127800"
 
     speed_id = _entity_id(entity_registry, "sensor", "42_2001_speed")
     speed = hass.states.get(speed_id)
