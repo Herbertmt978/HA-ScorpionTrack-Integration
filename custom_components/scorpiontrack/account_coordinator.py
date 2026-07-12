@@ -290,8 +290,10 @@ def _merge_share_position(
     friendly_state = share_vehicle.status.replace("_", " ").title()
     if share_position.latitude is None or share_position.longitude is None:
         latitude, longitude = base.latitude, base.longitude
+        address = base.address
     else:
         latitude, longitude = share_position.latitude, share_position.longitude
+        address = share_position.address
     position = replace(
         base,
         latitude=latitude,
@@ -300,7 +302,7 @@ def _merge_share_position(
         speed=share_position.speed_kmh,
         speed_kmh=share_position.speed_kmh,
         bearing=share_position.bearing,
-        address=share_position.address,
+        address=address,
         ignition=share_position.ignition,
         raw_state=share_vehicle.status,
         friendly_state=friendly_state,

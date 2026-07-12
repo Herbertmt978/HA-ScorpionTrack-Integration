@@ -6,6 +6,12 @@ All notable changes to this project are documented here.
 
 No changes yet.
 
+## 0.3.1 - 2026-07-13
+
+### Fixed
+
+- Hybrid entries retain the portal address with the portal coordinates when a newer share update has an incomplete coordinate pair.
+
 ## 0.3.0 - 2026-07-12
 
 ### Added
