@@ -212,6 +212,50 @@ async def test_hybrid_account_uses_newer_share_position(
     assert speed.attributes["unit_of_measurement"] == "km/h"
 
 
+@pytest.mark.parametrize(
+    ("latitude", "longitude"),
+    [
+        (None, None),
+        (None, -1.2345),
+        (52.1234, None),
+    ],
+)
+async def test_hybrid_share_with_incomplete_coordinates_preserves_account_location(
+    hass: HomeAssistant,
+    entity_registry: er.EntityRegistry,
+    hybrid_account_config_entry: MockConfigEntry,
+    client_mocks: SimpleNamespace,
+    mock_share: ScorpionTrackShare,
+    latitude: float | None,
+    longitude: float | None,
+) -> None:
+    """An incomplete shared coordinate pair must not replace portal location."""
+    share_position = replace(
+        mock_share.vehicles[0].position,
+        latitude=latitude,
+        longitude=longitude,
+        timestamp=datetime.now(UTC),
+        speed_kmh=80.0,
+    )
+    client_mocks.share.async_get_share.return_value = replace(
+        mock_share,
+        vehicles=(replace(mock_share.vehicles[0], position=share_position),),
+    )
+
+    await setup_integration(hass, hybrid_account_config_entry)
+
+    tracker_id = _entity_id(entity_registry, "device_tracker", "42_2001_tracker")
+    tracker = hass.states.get(tracker_id)
+    assert tracker is not None
+    assert tracker.attributes["latitude"] == 51.5074
+    assert tracker.attributes["longitude"] == -0.1278
+
+    speed_id = _entity_id(entity_registry, "sensor", "42_2001_speed")
+    speed = hass.states.get(speed_id)
+    assert speed is not None
+    assert speed.state == "80.0"
+
+
 async def test_hybrid_account_polls_share_faster_than_account(
     hass: HomeAssistant,
     freezer: Any,
