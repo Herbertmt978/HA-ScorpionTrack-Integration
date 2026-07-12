@@ -19,6 +19,10 @@ No changes yet.
 - Hybrid entries now refresh live share positions every 2 minutes while retaining the 5-minute portal-account cadence for alerts, metadata, and controls.
 - Newer share positions update the existing account tracker and live sensors without changing deployed entity IDs; temporary share failures retain the last newer live position while portal metadata and controls continue.
 
+### Fixed
+
+- Hybrid entries retain the portal location when a newer share update omits part or all of its coordinate pair.
+
 ## 0.2.1 - 2026-07-11
 
 ### Added
