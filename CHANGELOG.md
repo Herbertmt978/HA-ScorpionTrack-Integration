@@ -4,6 +4,10 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+No changes yet.
+
+## 0.3.0 - 2026-07-12
+
 ### Added
 
 - Selectable `mph` or `km/h` speed units for portal-account and shared-link entries.
