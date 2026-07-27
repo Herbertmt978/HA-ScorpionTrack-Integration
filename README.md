@@ -228,7 +228,7 @@ Support for this custom integration belongs in this repository, not in the Home 
 
 ## Development
 
-The test suite covers the minimum compatibility lane, Home Assistant 2025.1.0 on Python 3.12, and the current pinned lane, Home Assistant 2026.7.2 on Python 3.14. CI requires 100% config-flow coverage and at least 95% overall integration coverage.
+The test suite covers the minimum compatibility lane, Home Assistant 2025.1.0 on Python 3.12, and the current pinned lane, Home Assistant 2026.7.4 on Python 3.14. CI requires 100% config-flow coverage and at least 95% overall integration coverage.
 
 Authenticated portal behaviour is documented in [docs/portal-notes.md](docs/portal-notes.md). Development commands and privacy requirements are in [CONTRIBUTING.md](CONTRIBUTING.md), changes are recorded in [CHANGELOG.md](CHANGELOG.md), and the manual publishing process is in [RELEASING.md](RELEASING.md).
 
