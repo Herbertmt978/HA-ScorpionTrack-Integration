@@ -4,7 +4,10 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
-No changes yet.
+### Changed
+
+- Raise the minimum supported Home Assistant version to 2026.8.0 and the development and test baseline to Python 3.14.2.
+- Refresh the locked Home Assistant test stack and retire the vulnerable Home Assistant 2025.1 compatibility graph.
 
 ## 0.3.1 - 2026-07-13
 
