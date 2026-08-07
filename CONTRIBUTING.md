@@ -12,10 +12,11 @@ Contributions to the HACS custom integration are welcome. The built-in Home Assi
 
 ## Development environment
 
-Install [uv](https://docs.astral.sh/uv/) and create a locked environment:
+Install [uv](https://docs.astral.sh/uv/) and Python 3.14.2 or later in the
+Python 3.14 series, then create a locked environment:
 
 ```bash
-uv sync --locked --all-groups --python 3.12
+uv sync --locked --all-groups --python 3.14
 ```
 
 Run the same quality checks used by CI:
@@ -32,7 +33,9 @@ uv run --locked --all-groups pytest tests \
   --cov-report=term-missing
 ```
 
-CI repeats the suite on the minimum and current pinned Home Assistant compatibility lanes.
+Home Assistant tests require Linux; Windows contributors should run them under
+WSL. Native Windows can still create the environment and run Ruff. CI runs the
+suite with Home Assistant 2026.8.0 from the lockfile on Python 3.14.
 
 ## Tests and fixtures
 

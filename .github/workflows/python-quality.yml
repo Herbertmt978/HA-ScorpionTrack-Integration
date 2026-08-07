@@ -45,7 +45,7 @@ jobs:
           python-version: "3.14"
       - uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
         with:
-          version: "0.11.28"
+          version: "0.11.31"
           enable-cache: true
           cache-suffix: lint
       - run: uv sync --locked --only-group lint --python 3.14
@@ -53,33 +53,23 @@ jobs:
       - run: uv run --locked --only-group lint ruff format --check --diff .
 
   test:
-    name: Tests (${{ matrix.lane }})
+    name: Tests (Home Assistant 2026.8.0)
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - lane: minimum
-            home-assistant-version: "2025.1.0"
-            python-version: "3.12"
-          - lane: current
-            home-assistant-version: "2026.7.4"
-            python-version: "3.14"
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: "3.14"
       - uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
         with:
-          version: "0.11.28"
+          version: "0.11.31"
           enable-cache: true
-          cache-suffix: py${{ matrix.python-version }}
+          cache-suffix: py3.14
       - name: Install test environment
-        run: uv sync --locked --only-group test --python "${{ matrix.python-version }}"
+        run: uv sync --locked --only-group test --python 3.14
       - name: Require full config-flow coverage
         run: >
           uv run --locked --only-group test
@@ -87,7 +77,7 @@ jobs:
           --cov=custom_components.scorpiontrack.config_flow
           --cov-report=term-missing
           --cov-fail-under=100
-      - name: Run complete suite on Home Assistant ${{ matrix.home-assistant-version }}
+      - name: Run complete suite on Home Assistant 2026.8.0
         run: >
           uv run --locked --only-group test
           pytest tests

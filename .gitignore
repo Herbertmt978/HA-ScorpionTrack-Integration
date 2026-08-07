@@ -3,6 +3,7 @@ __pycache__/
 *.log
 .DS_Store
 .coverage
+.coverage.*
 .pytest_cache/
 .ruff_cache/
 .venv*/
