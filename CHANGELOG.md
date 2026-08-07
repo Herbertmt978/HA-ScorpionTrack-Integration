@@ -4,6 +4,10 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+No changes yet.
+
+## 0.3.2 - 2026-08-07
+
 ### Changed
 
 - Raise the minimum supported Home Assistant version to 2026.8.0 and the development and test baseline to Python 3.14.2.
