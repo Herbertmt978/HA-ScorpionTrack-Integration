@@ -2,7 +2,7 @@ name: Dependabot auto-merge
 
 on:
   pull_request_target:
-    types: [opened, reopened, synchronize, ready_for_review]
+    types: [opened, reopened, synchronize, ready_for_review, converted_to_draft]
 
 # This workflow only reads trusted metadata from the base branch. It never
 # checks out or executes code from the pull request.
@@ -26,6 +26,18 @@ jobs:
     timeout-minutes: 5
 
     steps:
+      - name: Clear stale automatic merge request
+        if: github.event.action == 'synchronize' || github.event.action == 'converted_to_draft'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$(gh pr view "$PR_URL" --json autoMergeRequest --jq '.autoMergeRequest != null')" == "true" ]]; then
+            gh pr merge --disable-auto "$PR_URL"
+          fi
+
       - name: Read Dependabot metadata
         if: github.actor == 'dependabot[bot]' && github.event.pull_request.draft == false
         id: metadata
@@ -125,15 +137,3 @@ jobs:
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           PR_URL: ${{ github.event.pull_request.html_url }}
         run: gh pr merge --auto --squash --match-head-commit "$PR_HEAD_SHA" "$PR_URL"
-
-      - name: Disable automatic merge after a manual branch change
-        if: github.event.action == 'synchronize' && github.actor != 'dependabot[bot]'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          PR_URL: ${{ github.event.pull_request.html_url }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [[ "$(gh pr view "$PR_URL" --json autoMergeRequest --jq '.autoMergeRequest != null')" == "true" ]]; then
-            gh pr merge --disable-auto "$PR_URL"
-          fi
