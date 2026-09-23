@@ -1,6 +1,10 @@
+<div align="center">
+
+<img src="brand/header.svg" alt="ScorpionTrack Integration: vehicle tracking and portal controls in Home Assistant" width="720">
+
 # ScorpionTrack Integration
 
-Use ScorpionTrack portal accounts or shared-location links in Home Assistant from one custom integration.
+Track vehicles from a ScorpionTrack portal account or shared-location link in Home Assistant.
 
 [![HACS validation](https://github.com/Herbertmt978/HA-ScorpionTrack-Integration/actions/workflows/validate.yml/badge.svg?branch=main)](https://github.com/Herbertmt978/HA-ScorpionTrack-Integration/actions/workflows/validate.yml)
 [![Hassfest](https://github.com/Herbertmt978/HA-ScorpionTrack-Integration/actions/workflows/hassfest.yml/badge.svg?branch=main)](https://github.com/Herbertmt978/HA-ScorpionTrack-Integration/actions/workflows/hassfest.yml)
@@ -10,11 +14,18 @@ Use ScorpionTrack portal accounts or shared-location links in Home Assistant fro
 
 [![Open this repository in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=Herbertmt978&repository=HA-ScorpionTrack-Integration&category=integration)
 
+[Choose a version](#choose-the-right-integration) | [Install](#installation) | [Set up](#setup) | [Update or remove](#update-roll-back-or-remove) | [Privacy](#security-and-privacy) | [Support](#troubleshooting)
+
+</div>
+
 ## Choose the right integration
 
-Home Assistant includes a built-in ScorpionTrack integration that you install from `Settings > Devices & services > Add integration`. It is simpler and has less functionality: it supports shared-location links only.
+Home Assistant includes a built-in ScorpionTrack integration, installed from
+**Settings → Devices & services → Add integration**. It supports shared-location
+links. Choose it when read-only tracking is enough.
 
-This HACS integration supports both portal accounts and shared-location links, including account alerts and verified portal controls.
+This custom integration adds portal accounts, account alerts and verified
+portal controls alongside shared-location tracking.
 
 | Capability | Built-in Home Assistant integration | This HACS integration |
 | --- | --- | --- |
