@@ -6,7 +6,7 @@ Portal-account mode adds account alerts, a `Mark Alerts Read` action, richer veh
 
 Portal accounts can optionally use a share link in the same config entry: authenticated account data remains on its five-minute cadence while live location, speed, heading, ignition, and status can update from the share every two minutes. Speed display is selectable as `mph` or `km/h` during setup or from the entry's options.
 
-Home Assistant also includes a built-in ScorpionTrack integration that is installed from `Settings > Devices & services > Add integration`. It is simpler and has less functionality because it supports shared-location links only. Its source and review history are available in [Herbertmt978/ScorpionTrack-Integration](https://github.com/Herbertmt978/ScorpionTrack-Integration).
+Home Assistant also includes a built-in ScorpionTrack integration, installed from **Settings → Devices & services → Add integration**. It supports shared-location links for read-only tracking. Its source and review history are available in [Herbertmt978/ScorpionTrack-Integration](https://github.com/Herbertmt978/ScorpionTrack-Integration).
 
 > [!IMPORTANT]
 > Both integrations use the same `scorpiontrack` domain and cannot run together. Installing this custom version makes it take precedence over the built-in version. Make a Home Assistant backup before installing, removing, or switching.
