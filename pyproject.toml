@@ -15,7 +15,9 @@ lint = [
 
 [tool.uv]
 package = false
-required-version = ">=0.11.15,<0.12"
+# CI retains its explicit uv pin; Dependabot currently uses the 0.12 series.
+# Both tool versions are verified against the same locked dependencies.
+required-version = ">=0.11.15,<0.13"
 prerelease = "allow"
 # The HA 2026.8 test fixture pins cryptography 48.0.1, which has known
 # certificate-verification vulnerabilities. Keep the HA compatibility baseline

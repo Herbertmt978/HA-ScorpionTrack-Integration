@@ -67,3 +67,7 @@ suite with Home Assistant 2026.8.0 from the lockfile on Python 3.14.
   Publishing releases and updating live installations are separate manual steps.
 
 All contributed code is provided under the repository's [MIT Licence](LICENSE).
+
+The uv tooling range supports both the explicitly pinned CI version and the
+0.12-series version used by Dependabot. Keep the lockfile compatible with both;
+changing that tooling range or the CI pin remains a manually reviewed change.

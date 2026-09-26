@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import shutil
 import subprocess
@@ -38,6 +39,7 @@ class AutoMergePolicyTest(unittest.TestCase):
             "PR_URL": "https://github.invalid/pull/1",
             "UPDATE_TYPE": "version-update:semver-patch",
             "CHANGED_FILES": "uv.lock\npyproject.toml",
+            "REVIEWS": '{"reviewDecision":"","reviews":[]}',
             **changes,
         }
         bash = shutil.which("bash")
@@ -49,7 +51,13 @@ class AutoMergePolicyTest(unittest.TestCase):
             output = Path(directory) / "github-output"
             environment["GITHUB_OUTPUT"] = output.as_posix()
             result = subprocess.run(
-                [bash, "-c", 'gh() { printf "%s\\n" "$CHANGED_FILES"; };\n' + POLICY],
+                [
+                    bash,
+                    "-c",
+                    'gh() { if [[ "$2" == "diff" ]]; then '
+                    'printf "%s\\n" "$CHANGED_FILES"; else '
+                    'printf "%s" "$REVIEWS" | jq -r "$7"; fi; };\n' + POLICY,
+                ],
                 env=environment,
                 check=False,
                 capture_output=True,
@@ -149,6 +157,44 @@ class AutoMergePolicyTest(unittest.TestCase):
             "startsWith(github.event.pull_request.head.ref, 'dependabot/uv/'))"
         )
         self.assertEqual(" ".join(gate.split()), expected_gate)
+
+    def test_outstanding_change_requests_stay_manual(self) -> None:
+        """Do not rely on a zero-approval rule to block a human change request."""
+        requested = {
+            "author": {"login": "reviewer"},
+            "state": "CHANGES_REQUESTED",
+            "submittedAt": "2026-09-01T10:00:00Z",
+        }
+        approved = {
+            "author": {"login": "reviewer"},
+            "state": "APPROVED",
+            "submittedAt": "2026-09-02T10:00:00Z",
+        }
+        self.assertFalse(self.eligible(REVIEWS="{}"))
+        self.assertFalse(self.eligible(REVIEWS='{"reviews":[{}]}'))
+        self.assertFalse(
+            self.eligible(REVIEWS='{"reviewDecision":"CHANGES_REQUESTED","reviews":[]}')
+        )
+        self.assertFalse(self.eligible(REVIEWS=json.dumps({"reviews": [requested]})))
+        commented = {**approved, "state": "COMMENTED"}
+        self.assertFalse(
+            self.eligible(REVIEWS=json.dumps({"reviews": [requested, commented]}))
+        )
+        self.assertTrue(
+            self.eligible(REVIEWS=json.dumps({"reviews": [requested, approved]}))
+        )
+        for timestamp in ("", "unknown", "2026-99-01T10:00:00Z"):
+            malformed = {**requested, "submittedAt": timestamp}
+            with self.subTest(timestamp=timestamp):
+                self.assertFalse(
+                    self.eligible(
+                        REVIEWS=json.dumps({"reviews": [malformed, approved]})
+                    )
+                )
+        approved["author"] = {"login": "another-reviewer"}
+        self.assertFalse(
+            self.eligible(REVIEWS=json.dumps({"reviews": [requested, approved]}))
+        )
 
 
 if __name__ == "__main__":
