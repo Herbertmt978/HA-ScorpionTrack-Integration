@@ -129,6 +129,18 @@ jobs:
             exit 0
           fi
 
+          review_state="$(gh pr view "$PR_URL" --json reviewDecision,reviews --jq '
+            if (.reviews | type) != "array" then "unknown"
+            elif .reviewDecision == "CHANGES_REQUESTED" then "blocked"
+            elif (.reviews | map(select(.state == "APPROVED" or .state == "CHANGES_REQUESTED" or .state == "DISMISSED"))
+              | group_by(.author.login) | map(sort_by(.submittedAt) | last)
+              | any(.state == "CHANGES_REQUESTED")) then "blocked"
+            else "clear" end')"
+          if [[ "$review_state" != "clear" ]]; then
+            echo "eligible=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
           echo "eligible=true" >> "$GITHUB_OUTPUT"
 
       - name: Queue eligible update for automatic merge
