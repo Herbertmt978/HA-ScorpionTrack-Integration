@@ -133,9 +133,10 @@ jobs:
             def valid_review:
               .state as $state |
               (.author.login | type == "string" and length > 0) and
-              (.submittedAt == null or (.submittedAt | type == "string")) and
+              ((.submittedAt | type == "string") or ($state == "PENDING" and .submittedAt == null)) and
               (["APPROVED", "CHANGES_REQUESTED", "COMMENTED", "DISMISSED", "PENDING"] | index($state) != null);
             if (.reviews | type) != "array" then "unknown"
+            elif (.reviews | length) >= 100 then "unknown"
             elif (.reviews | all(.[]; valid_review) | not) then "unknown"
             elif (.reviewDecision != null and .reviewDecision != "" and
               (.reviewDecision as $decision | ["APPROVED", "CHANGES_REQUESTED", "REVIEW_REQUIRED"] | index($decision) == null)) then "unknown"
