@@ -1,5 +1,14 @@
 version: 2
 updates:
+  # The HA fixture, client/runtime pin and security override need explicit
+  # compatibility review. Only lint-tool package updates are routine here.
+  - package-ecosystem: uv
+    directory: /
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 5
+    allow:
+      - dependency-name: "ruff"
   - package-ecosystem: github-actions
     directory: /
     schedule:
