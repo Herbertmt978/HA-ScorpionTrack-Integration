@@ -12,6 +12,12 @@ Contributions to the HACS custom integration are welcome. The built-in Home Assi
 
 ## Development environment
 
+The test environment overrides Home Assistant's cryptography pin with 50.0.1
+to address certificate-verification vulnerabilities. Tests retain the Home
+Assistant 2026.8.0 compatibility baseline but do not use its stock dependency
+set. This override applies to development and CI; HACS installs use the
+dependencies provided by the user's Home Assistant installation.
+
 Install [uv](https://docs.astral.sh/uv/) and Python 3.14.2 or later in the
 Python 3.14 series, then create a locked environment:
 
