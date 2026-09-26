@@ -130,7 +130,15 @@ jobs:
           fi
 
           review_state="$(gh pr view "$PR_URL" --json reviewDecision,reviews --jq '
+            def valid_review:
+              .state as $state |
+              (.author.login | type == "string" and length > 0) and
+              (.submittedAt == null or (.submittedAt | type == "string")) and
+              (["APPROVED", "CHANGES_REQUESTED", "COMMENTED", "DISMISSED", "PENDING"] | index($state) != null);
             if (.reviews | type) != "array" then "unknown"
+            elif (.reviews | all(.[]; valid_review) | not) then "unknown"
+            elif (.reviewDecision != null and .reviewDecision != "" and
+              (.reviewDecision as $decision | ["APPROVED", "CHANGES_REQUESTED", "REVIEW_REQUIRED"] | index($decision) == null)) then "unknown"
             elif .reviewDecision == "CHANGES_REQUESTED" then "blocked"
             elif (.reviews | map(select(.state == "APPROVED" or .state == "CHANGES_REQUESTED" or .state == "DISMISSED"))
               | group_by(.author.login) | map(sort_by(.submittedAt) | last)

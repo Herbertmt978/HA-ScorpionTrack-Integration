@@ -39,7 +39,7 @@ class AutoMergePolicyTest(unittest.TestCase):
             "PR_URL": "https://github.invalid/pull/1",
             "UPDATE_TYPE": "version-update:semver-patch",
             "CHANGED_FILES": "uv.lock\npyproject.toml",
-            "REVIEWS": '{"reviewDecision":null,"reviews":[]}',
+            "REVIEWS": '{"reviewDecision":"","reviews":[]}',
             **changes,
         }
         bash = shutil.which("bash")
@@ -171,10 +171,15 @@ class AutoMergePolicyTest(unittest.TestCase):
             "submittedAt": "2026-09-02T10:00:00Z",
         }
         self.assertFalse(self.eligible(REVIEWS="{}"))
+        self.assertFalse(self.eligible(REVIEWS='{"reviews":[{}]}'))
         self.assertFalse(
             self.eligible(REVIEWS='{"reviewDecision":"CHANGES_REQUESTED","reviews":[]}')
         )
         self.assertFalse(self.eligible(REVIEWS=json.dumps({"reviews": [requested]})))
+        commented = {**approved, "state": "COMMENTED"}
+        self.assertFalse(
+            self.eligible(REVIEWS=json.dumps({"reviews": [requested, commented]}))
+        )
         self.assertTrue(
             self.eligible(REVIEWS=json.dumps({"reviews": [requested, approved]}))
         )
