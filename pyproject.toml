@@ -17,6 +17,10 @@ lint = [
 package = false
 required-version = ">=0.11.15,<0.12"
 prerelease = "allow"
+# The HA 2026.8 test fixture pins cryptography 48.0.1, which has known
+# certificate-verification vulnerabilities. Keep the HA compatibility baseline
+# while testing with the patched dependency; this does not alter HACS installs.
+override-dependencies = ["cryptography==50.0.1"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
