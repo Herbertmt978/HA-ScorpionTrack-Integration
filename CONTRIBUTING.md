@@ -58,6 +58,12 @@ suite with Home Assistant 2026.8.0 from the lockfile on Python 3.14.
 - State whether portal-account mode, shared-link mode, or both were tested.
 - Update the README and changelog when behaviour changes.
 - Let every required check finish before merge.
-- Do not automate merging or publishing. The maintainer reviews and completes those actions manually.
+- Dependabot may queue individual stable patch/minor updates to the allowlisted
+  GitHub Actions or Ruff for auto-merge after every required check passes.
+  The policy accepts only the expected dependency files, excludes groups and
+  maintainer-edited PRs, and never approves reviews or bypasses protections.
+- Home Assistant test-fixture changes, client/runtime pins, dependency overrides,
+  major/prerelease upgrades and all other changes remain maintainer-reviewed.
+  Publishing releases and updating live installations are separate manual steps.
 
 All contributed code is provided under the repository's [MIT Licence](LICENSE).

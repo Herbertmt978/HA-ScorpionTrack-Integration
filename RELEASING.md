@@ -1,6 +1,10 @@
 # Releasing
 
-Releases are validated automatically and published manually. Do not configure automatic merging, tagging, release-note generation, or publishing.
+Releases are validated automatically and published manually. Do not configure
+automatic tagging, release-note generation, or publishing. The only automatic
+merge exception is the narrow Dependabot policy documented in CONTRIBUTING:
+individual stable patch/minor updates to allowlisted GitHub Actions or Ruff,
+with expected changed paths and every protected-branch check passing.
 
 ## Monthly dependency review
 
@@ -11,7 +15,11 @@ uv lock --upgrade
 git diff -- pyproject.toml uv.lock .github/workflows
 ```
 
-Review every dependency and action change, retain full commit-SHA action pins, then run the complete lint and test suite. Do not enable bot-authored dependency pull requests while the repository uses a human-originated change policy.
+Retain full commit-SHA action pins and the complete lint and test gates. Review
+changes outside the Dependabot allowlist manually, including Home Assistant
+fixtures, client/runtime pins, dependency overrides and major/prerelease updates.
+Auto-merging a routine dependency update never publishes a release or updates
+an installed Home Assistant environment.
 
 ## Prepare a release
 
