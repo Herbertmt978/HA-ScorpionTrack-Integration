@@ -183,6 +183,14 @@ class AutoMergePolicyTest(unittest.TestCase):
         self.assertTrue(
             self.eligible(REVIEWS=json.dumps({"reviews": [requested, approved]}))
         )
+        for timestamp in ("", "unknown", "2026-99-01T10:00:00Z"):
+            malformed = {**requested, "submittedAt": timestamp}
+            with self.subTest(timestamp=timestamp):
+                self.assertFalse(
+                    self.eligible(
+                        REVIEWS=json.dumps({"reviews": [malformed, approved]})
+                    )
+                )
         approved["author"] = {"login": "another-reviewer"}
         self.assertFalse(
             self.eligible(REVIEWS=json.dumps({"reviews": [requested, approved]}))
