@@ -6,11 +6,11 @@ dependencies = []
 
 [dependency-groups]
 test = [
-  "pyscorpiontrack==0.1.1",
+  "pyscorpiontrack==0.1.2",
   "pytest-homeassistant-custom-component==0.13.354",
 ]
 lint = [
-  "ruff==0.15.21",
+  "ruff==0.16.9",
 ]
 
 [tool.uv]
@@ -19,10 +19,9 @@ package = false
 # Both tool versions are verified against the same locked dependencies.
 required-version = ">=0.11.15,<0.13"
 prerelease = "allow"
-# The HA 2026.8 test fixture pins cryptography 48.0.1, which has known
-# certificate-verification vulnerabilities. Keep the HA compatibility baseline
-# while testing with the patched dependency; this does not alter HACS installs.
-override-dependencies = ["cryptography==50.0.1"]
+# Keep the HA 2026.8 compatibility fixture while replacing its vulnerable
+# cryptography and PyJWT pins in development/CI only, not HACS installs.
+override-dependencies = ["cryptography==50.0.1", "pyjwt==2.15.0"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
