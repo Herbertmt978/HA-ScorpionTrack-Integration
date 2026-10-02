@@ -11,6 +11,7 @@ All notable changes to this project are documented here.
 ### Changed
 
 - Update the pinned Hassfest action and Ruff development tool.
+- Update the development test environment to patched PyJWT and urllib3 versions; installed Home Assistant dependencies are unchanged.
 
 ## 0.3.2 - 2026-08-07
 
