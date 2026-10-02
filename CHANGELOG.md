@@ -4,7 +4,13 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
-No changes yet.
+### Fixed
+
+- Require at least `pyscorpiontrack` 0.1.2 for the shared-location client, restoring Hassfest compatibility and using safer error handling while allowing Home Assistant to update its shared dependency.
+
+### Changed
+
+- Update the pinned Hassfest action and Ruff development tool.
 
 ## 0.3.2 - 2026-08-07
 
