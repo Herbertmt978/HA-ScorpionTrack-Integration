@@ -23,6 +23,7 @@ No changes yet.
 ### Changed
 
 - Odometer attributes now explicitly use kilometres (`odometer_unit` and `position_odometer_unit`); the odometer sensor follows the account's distance preference.
+- Update the development lockfile to `multidict` 6.9.1, fixing its items-view reference leak; installed Home Assistant dependencies are unchanged.
 
 ## 0.3.3 - 2026-10-12
 
