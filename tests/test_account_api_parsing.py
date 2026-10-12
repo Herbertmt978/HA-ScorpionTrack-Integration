@@ -8,9 +8,13 @@ import logging
 from collections.abc import Iterable
 from dataclasses import dataclass, fields
 from datetime import UTC, date, datetime, timedelta
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers import entity_registry as er
+from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.scorpiontrack.account_api import (
     ScorpionTrackAccountClient,
@@ -21,6 +25,8 @@ from custom_components.scorpiontrack.account_api import (
     ScorpionTrackPortalError,
     ScorpionTrackVehicleSummary,
 )
+
+from . import setup_integration
 
 
 @dataclass(slots=True)
@@ -551,6 +557,102 @@ async def test_refresh_parses_paginated_account_snapshot_and_public_models() -> 
         == "Basic " + base64.b64encode(b"private-fms-key").decode()
     )
     assert vehicle_calls[0]["kwargs"]["allow_redirects"] is False
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("map_voltage", "latest_voltage", "health_voltage", "expected"),
+    [
+        ("12.50V", None, 12, 12.5),
+        ("14.42V", "12.3", 12, 14.42),
+        ("0.67V", None, 12, 0.67),
+        ("0.00V", "12.3", 12, 0.0),
+        (0, None, 12, 0.0),
+        (12.5, None, 12, 12.5),
+        ("12.50", None, 12, 12.5),
+        (" 12.50 V ", None, 12, 12.5),
+        (None, "12.50V", 12, 12.5),
+        ("invalid", "12.50V", 12, 12.5),
+        (None, "0.00V", 12, 0.0),
+        ("", None, 12, 12.0),
+        ("invalidV", None, 12, 12.0),
+        (None, None, "12.4", 12.4),
+        (None, None, None, None),
+    ],
+)
+async def test_portal_voltage_reaches_home_assistant(
+    hass: HomeAssistant,
+    entity_registry: er.EntityRegistry,
+    account_config_entry: MockConfigEntry,
+    client_mocks: SimpleNamespace,
+    map_voltage: object,
+    latest_voltage: object,
+    health_voltage: object,
+    expected: float | None,
+) -> None:
+    """Use map voltage, including its V suffix and zero, before healthcheck data."""
+    session = _ScriptedSession(
+        [
+            *_login_responses(),
+            _ResponseSpec(
+                json.dumps(
+                    {
+                        "vehicles": {
+                            "data": [
+                                {
+                                    "id": 2001,
+                                    "registration": "AB12 CDE",
+                                    "latest_position": {
+                                        "data": {
+                                            "state": "OFF",
+                                            "vehicleVoltage": latest_voltage,
+                                        }
+                                    },
+                                    "healthcheck": {
+                                        "data": {
+                                            "vehicle_system_voltage": health_voltage
+                                        }
+                                    },
+                                }
+                            ]
+                        }
+                    }
+                )
+            ),
+            _ResponseSpec(
+                json.dumps(
+                    {
+                        "Positions": [
+                            {
+                                "vehicleId": 2001,
+                                "state": "OFF",
+                                "vehicleVoltage": map_voltage,
+                            }
+                        ]
+                    }
+                )
+            ),
+            _ResponseSpec(json.dumps({"data": [], "meta": {"total": 0}})),
+            _ResponseSpec(json.dumps({"data": []})),
+        ]
+    )
+    account = await _client(session).async_refresh_account()
+    assert session.remaining == 0
+    assert account.vehicles[0].vehicle_voltage == expected
+
+    client_mocks.account.async_refresh_account.return_value = account
+    await setup_integration(hass, account_config_entry)
+
+    entity_id = entity_registry.async_get_entity_id(
+        "sensor", "scorpiontrack", "42_2001_battery_voltage"
+    )
+    assert entity_id is not None
+    state = hass.states.get(entity_id)
+    assert state is not None
+    assert state.state == (str(expected) if expected is not None else "unknown")
+    assert state.attributes["unit_of_measurement"] == "V"
+    assert state.attributes["device_class"] == "voltage"
+    assert state.attributes["state_class"] == "measurement"
 
 
 @pytest.mark.asyncio

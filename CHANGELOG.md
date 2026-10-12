@@ -4,8 +4,14 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+No changes yet.
+
+## 0.3.3 - 2026-10-12
+
 ### Fixed
 
+- Parse portal battery-voltage readings with a `V` suffix so decimal readings match the ScorpionTrack map instead of falling back to the health-check voltage.
+- Preserve valid zero-volt readings when a health-check voltage is also available.
 - Require at least `pyscorpiontrack` 0.1.2 for the shared-location client, restoring Hassfest compatibility and using safer error handling while allowing Home Assistant to update its shared dependency.
 
 ### Changed
