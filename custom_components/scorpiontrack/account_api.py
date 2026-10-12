@@ -1139,9 +1139,10 @@ class ScorpionTrackAccountClient:
             mot_due=_coerce_temporal(vehicle_data.get("mot_due")),
             tax_due=_coerce_temporal(vehicle_data.get("tax_due")),
             battery_type=_clean_text(vehicle_data.get("battery_type")),
-            vehicle_voltage=_coerce_float(
-                (position.vehicle_voltage if position is not None else None)
-                or healthcheck_data.get("vehicle_system_voltage")
+            vehicle_voltage=(
+                position.vehicle_voltage
+                if position is not None and position.vehicle_voltage is not None
+                else _coerce_float(healthcheck_data.get("vehicle_system_voltage"))
             ),
             backup_battery_voltage=_coerce_float(
                 healthcheck_data.get("backup_battery_voltage")
@@ -1285,6 +1286,13 @@ def _coerce_float(value: Any) -> float | None:
         return float(value)
     except TypeError, ValueError:
         return None
+
+
+def _coerce_voltage(value: Any) -> float | None:
+    """Parse numeric voltage or the portal's voltage text with a V suffix."""
+    if isinstance(value, str):
+        value = value.strip().removesuffix("V")
+    return _coerce_float(value)
 
 
 def _coerce_bool(value: Any) -> bool | None:
@@ -1450,7 +1458,7 @@ def _parse_position(
         hdop=_coerce_float(position_data.get("hdop")),
         raw_state=raw_state,
         friendly_state=friendly_state,
-        vehicle_voltage=_coerce_float(position_data.get("vehicleVoltage")),
+        vehicle_voltage=_coerce_voltage(position_data.get("vehicleVoltage")),
         odometer=_coerce_float(position_data.get("odometer")),
         unit_type=_clean_text(position_data.get("unitType")),
         unit_id=_coerce_int(position_data.get("unitId")),

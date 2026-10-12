@@ -112,6 +112,8 @@ Portal-account mode provides:
 - binary sensors including `Ignition`, `Engine`, `Armed Mode Enabled`, `EWM Enabled`, `Driver Module Fitted`, `G-Sense Enabled`, and `Location Stale`
 - verified switches for `Privacy Mode` and `Zero-Speed Mode`
 
+`Battery Voltage` uses the portal's map reading, including decimal values and zero. If that reading is missing or invalid, it uses the latest-position voltage, then the vehicle health-check voltage when available. The reading reflects the tracker's last report rather than a continuous battery measurement.
+
 ### Faster live data for portal accounts
 
 The portal account feed can return location data less frequently than Home Assistant polls it. To retain account alerts and controls while receiving newer live vehicle data:
