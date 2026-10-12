@@ -16,6 +16,7 @@ from homeassistant.components.sensor import (
 from homeassistant.const import (
     EntityCategory,
     UnitOfElectricPotential,
+    UnitOfLength,
     UnitOfSpeed,
 )
 from homeassistant.core import HomeAssistant, callback
@@ -151,7 +152,14 @@ VEHICLE_SENSOR_DESCRIPTIONS: tuple[ScorpionTrackVehicleSensorDescription, ...] =
         name="Odometer",
         suggested_display_precision=1,
         icon="mdi:counter",
-        value_fn=lambda account, vehicle: vehicle.odometer,
+        value_fn=lambda account, vehicle: (
+            vehicle.odometer / 1.609344
+            if vehicle.odometer is not None and account.uses_miles
+            else vehicle.odometer
+        ),
+        unit_fn=lambda account, vehicle: (
+            UnitOfLength.MILES if account.uses_miles else UnitOfLength.KILOMETERS
+        ),
     ),
     ScorpionTrackVehicleSensorDescription(
         key="battery_voltage",

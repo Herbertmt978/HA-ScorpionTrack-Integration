@@ -114,6 +114,8 @@ Portal-account mode provides:
 
 `Battery Voltage` uses the portal's map reading, including decimal values and zero. If that reading is missing or invalid, it uses the latest-position voltage, then the vehicle health-check voltage when available. The reading reflects the tracker's last report rather than a continuous battery measurement.
 
+`Odometer` follows the account's distance preference and includes its unit (`mi` or `km`). Map and fleet readings are normalised to kilometres before choosing a source, so falling back cannot change the distance scale. The `odometer` and `position_odometer` attributes use kilometres and include explicit unit attributes. Automations using those attributes should use their declared unit. Zero readings are retained; missing engine or ignition readings are shown as unknown.
+
 ### Faster live data for portal accounts
 
 The portal account feed can return location data less frequently than Home Assistant polls it. To retain account alerts and controls while receiving newer live vehicle data:

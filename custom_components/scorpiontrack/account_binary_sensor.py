@@ -50,7 +50,7 @@ VEHICLE_BINARY_SENSOR_DESCRIPTIONS: tuple[
         name="Engine",
         icon="mdi:engine",
         value_fn=lambda account, vehicle: (
-            bool(vehicle.position.engine) if vehicle.position else None
+            vehicle.position.engine if vehicle.position else None
         ),
     ),
     ScorpionTrackVehicleBinarySensorDescription(

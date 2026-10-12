@@ -6,6 +6,24 @@ All notable changes to this project are documented here.
 
 No changes yet.
 
+## 0.3.4 - 2026-10-12
+
+### Fixed
+
+- Preserve zero odometer and GPS satellite readings instead of replacing them with fallback values.
+- Normalise map odometers from miles to kilometres before merging with fleet data. Display the odometer in the account's preferred distance unit and label it explicitly, so a fallback cannot change its scale.
+- Honour `mph` when the map supplies a display speed without `speedkm`.
+- Keep partial telemetry, including voltage and ignition, even when location and timestamp fields are absent.
+- Derive vehicle status after merging readings and honour the vehicle-level state when a position has no state.
+- Preserve unknown account engine and shared-link ignition readings instead of reporting them as off.
+- Treat non-finite numbers and out-of-range timestamps as missing, allowing valid fallback readings to be used.
+- Use the unit's fitted date when the vehicle installation date is invalid, while retaining a valid zero timestamp.
+- Keep vehicle updates working when optional alert data is null or malformed.
+
+### Changed
+
+- Odometer attributes now explicitly use kilometres (`odometer_unit` and `position_odometer_unit`); the odometer sensor follows the account's distance preference.
+
 ## 0.3.3 - 2026-10-12
 
 ### Fixed

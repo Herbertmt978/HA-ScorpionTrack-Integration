@@ -6,8 +6,9 @@ import asyncio
 import base64
 import json
 import logging
+import math
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields, replace
 from datetime import UTC, date, datetime
 from typing import Any
 from urllib.parse import urljoin, urlparse
@@ -724,8 +725,8 @@ class ScorpionTrackAccountClient:
 
         alerts = tuple(
             self._parse_alert(item)
-            for item in payload.get("data", [])
-            if isinstance(item, dict) and _coerce_int(item.get("id")) is not None
+            for item in _extract_nested_list(payload)
+            if _coerce_int(item.get("id")) is not None
         )
         meta = payload.get("meta")
         total = _coerce_int(meta.get("total")) if isinstance(meta, dict) else None
@@ -1109,10 +1110,11 @@ class ScorpionTrackAccountClient:
             (position.raw_state if position is not None else None)
             or vehicle_data.get("state")
         )
-        status = (
-            position.friendly_state
-            if position is not None
-            else _derive_vehicle_status(raw_state, None, None, None)
+        status = _derive_vehicle_status(
+            raw_state,
+            position.ignition if position is not None else None,
+            position.engine if position is not None else None,
+            position.speed_kmh if position is not None else None,
         )
 
         return ScorpionTrackVehicleSummary(
@@ -1127,12 +1129,14 @@ class ScorpionTrackAccountClient:
             fuel_type=_clean_text(vehicle_data.get("fuel_type")),
             raw_state=raw_state,
             status=status,
-            odometer=_coerce_float(
-                (position.odometer if position is not None else None)
-                or vehicle_data.get("odometer")
+            odometer=(
+                position.odometer
+                if position is not None and position.odometer is not None
+                else _coerce_float(vehicle_data.get("odometer"))
             ),
-            installed_at=_coerce_datetime(
-                vehicle_data.get("installed") or unit_data.get("fitted")
+            installed_at=(
+                _coerce_datetime(vehicle_data.get("installed"))
+                or _coerce_datetime(unit_data.get("fitted"))
             ),
             updated_at=_coerce_datetime(vehicle_data.get("timestamp")),
             last_service_date=_coerce_temporal(vehicle_data.get("lastService")),
@@ -1273,7 +1277,7 @@ def _coerce_int(value: Any) -> int | None:
 
     try:
         return int(value)
-    except TypeError, ValueError:
+    except TypeError, ValueError, OverflowError:
         return None
 
 
@@ -1283,8 +1287,9 @@ def _coerce_float(value: Any) -> float | None:
         return None
 
     try:
-        return float(value)
-    except TypeError, ValueError:
+        parsed = float(value)
+        return parsed if math.isfinite(parsed) else None
+    except TypeError, ValueError, OverflowError:
         return None
 
 
@@ -1302,7 +1307,8 @@ def _coerce_bool(value: Any) -> bool | None:
     if isinstance(value, bool):
         return value
     if isinstance(value, (int, float)):
-        return bool(value)
+        parsed = _coerce_float(value)
+        return bool(parsed) if parsed is not None else None
     if isinstance(value, str):
         lowered = value.strip().lower()
         if lowered in {"1", "true", "yes", "on"}:
@@ -1321,7 +1327,10 @@ def _coerce_datetime(value: Any) -> datetime | None:
         return value if value.tzinfo is not None else value.replace(tzinfo=UTC)
 
     if isinstance(value, (int, float)):
-        return datetime.fromtimestamp(value, UTC)
+        try:
+            return datetime.fromtimestamp(value, UTC)
+        except ValueError, OverflowError, OSError:
+            return None
 
     if isinstance(value, str):
         cleaned = value.strip()
@@ -1345,7 +1354,7 @@ def _coerce_datetime(value: Any) -> datetime | None:
                 )
             if cleaned.isdigit():
                 return datetime.fromtimestamp(int(cleaned), UTC)
-        except ValueError:
+        except ValueError, OverflowError, OSError:
             return None
 
     return None
@@ -1424,24 +1433,33 @@ def _parse_position(
     timestamp = _coerce_datetime(position_data.get("timestamp"))
     speed_kmh = _coerce_float(position_data.get("speedkm"))
     speed = _coerce_float(position_data.get("speed"))
+    units_speed = _clean_text(position_data.get("unitsSpeed"))
     if speed_kmh is None:
-        speed_kmh = speed
+        speed_kmh = (
+            speed * 1.609344
+            if speed is not None and (units_speed or "").lower() == "mph"
+            else speed
+        )
+
+    distance_units = _clean_text(position_data.get("distanceUnits"))
+    odometer = _coerce_float(position_data.get("odometer"))
+    if odometer is not None and (distance_units or "").lower() in {
+        "mi",
+        "mile",
+        "miles",
+    }:
+        odometer *= 1.609344
 
     ignition = _coerce_bool(position_data.get("ignition"))
     engine = _coerce_bool(position_data.get("engine"))
     raw_state = _clean_text(position_data.get("state"))
     friendly_state = _derive_vehicle_status(raw_state, ignition, engine, speed_kmh)
 
-    if (
-        latitude is None
-        and longitude is None
-        and timestamp is None
-        and speed_kmh is None
-        and raw_state is None
-    ):
-        return None
+    gps_satellites = _coerce_int(position_data.get("gps"))
+    if gps_satellites is None:
+        gps_satellites = _coerce_int(position_data.get("gps_satellites"))
 
-    return ScorpionTrackVehiclePosition(
+    position = ScorpionTrackVehiclePosition(
         latitude=latitude,
         longitude=longitude,
         timestamp=timestamp,
@@ -1452,18 +1470,26 @@ def _parse_position(
         address=_clean_text(position_data.get("address")),
         ignition=ignition,
         engine=engine,
-        gps_satellites=_coerce_int(
-            position_data.get("gps") or position_data.get("gps_satellites")
-        ),
+        gps_satellites=gps_satellites,
         hdop=_coerce_float(position_data.get("hdop")),
         raw_state=raw_state,
         friendly_state=friendly_state,
         vehicle_voltage=_coerce_voltage(position_data.get("vehicleVoltage")),
-        odometer=_coerce_float(position_data.get("odometer")),
+        odometer=odometer,
         unit_type=_clean_text(position_data.get("unitType")),
         unit_id=_coerce_int(position_data.get("unitId")),
-        distance_units=_clean_text(position_data.get("distanceUnits")),
-        units_speed=_clean_text(position_data.get("unitsSpeed")),
+        distance_units=distance_units,
+        units_speed=units_speed,
+    )
+    return (
+        position
+        if any(
+            getattr(position, item.name) is not None
+            for item in fields(position)
+            if item.name
+            not in {"unit_type", "unit_id", "distance_units", "units_speed"}
+        )
+        else None
     )
 
 
@@ -1477,7 +1503,7 @@ def _merge_positions(
     if fallback is None:
         return primary
 
-    return ScorpionTrackVehiclePosition(
+    position = ScorpionTrackVehiclePosition(
         latitude=primary.latitude
         if primary.latitude is not None
         else fallback.latitude,
@@ -1507,7 +1533,7 @@ def _merge_positions(
         ),
         hdop=primary.hdop if primary.hdop is not None else fallback.hdop,
         raw_state=primary.raw_state or fallback.raw_state,
-        friendly_state=primary.friendly_state or fallback.friendly_state,
+        friendly_state=None,
         vehicle_voltage=(
             primary.vehicle_voltage
             if primary.vehicle_voltage is not None
@@ -1520,6 +1546,12 @@ def _merge_positions(
         unit_id=primary.unit_id if primary.unit_id is not None else fallback.unit_id,
         distance_units=primary.distance_units or fallback.distance_units,
         units_speed=primary.units_speed or fallback.units_speed,
+    )
+    return replace(
+        position,
+        friendly_state=_derive_vehicle_status(
+            position.raw_state, position.ignition, position.engine, position.speed_kmh
+        ),
     )
 
 
