@@ -152,6 +152,7 @@ class ScorpionTrackVehicleEntity(ScorpionTrackCoordinatorEntity):
             "gps_hdop": position.hdop,
             "vehicle_voltage": position.vehicle_voltage,
             "position_odometer": position.odometer,
+            "position_odometer_unit": "km",
             "position_state": position.raw_state,
         }
 
@@ -173,6 +174,7 @@ class ScorpionTrackVehicleEntity(ScorpionTrackCoordinatorEntity):
             "status": selected_vehicle.status,
             "portal_state": selected_vehicle.raw_state,
             "odometer": selected_vehicle.odometer,
+            "odometer_unit": "km",
             "groups": list(selected_vehicle.group_names),
             "last_service_date": selected_vehicle.last_service_date,
             "battery_type": selected_vehicle.battery_type,

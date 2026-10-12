@@ -27,7 +27,7 @@ PARALLEL_UPDATES = 0
 class ScorpionTrackBinarySensorDescription(BinarySensorEntityDescription):
     """Describe a ScorpionTrack binary sensor."""
 
-    value_fn: Callable[[ScorpionTrackBinarySensorEntity], bool]
+    value_fn: Callable[[ScorpionTrackBinarySensorEntity], bool | None]
 
 
 BINARY_SENSOR_DESCRIPTIONS: tuple[ScorpionTrackBinarySensorDescription, ...] = (
@@ -35,7 +35,7 @@ BINARY_SENSOR_DESCRIPTIONS: tuple[ScorpionTrackBinarySensorDescription, ...] = (
         key="ignition",
         name="Ignition",
         icon="mdi:engine",
-        value_fn=lambda entity: entity.vehicle.position.ignition is True,
+        value_fn=lambda entity: entity.vehicle.position.ignition,
     ),
     ScorpionTrackBinarySensorDescription(
         key="location_stale",
@@ -98,7 +98,7 @@ class ScorpionTrackBinarySensorEntity(ScorpionTrackEntity, BinarySensorEntity):
 
     @property
     @override
-    def is_on(self) -> bool:
+    def is_on(self) -> bool | None:
         """Return the binary sensor state."""
         return self.entity_description.value_fn(self)
 
