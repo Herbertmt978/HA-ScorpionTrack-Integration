@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="brand/header.svg" alt="ScorpionTrack Integration: vehicle tracking and portal controls in Home Assistant" width="720">
+<img src="brand/header.svg" alt="ScorpionTrack Integration: a tracked car on a night-time map with an amber route" width="880">
 
 # ScorpionTrack Integration
 
