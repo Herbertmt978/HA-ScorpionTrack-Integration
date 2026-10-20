@@ -13,8 +13,10 @@ Contributions to the HACS custom integration are welcome. The built-in Home Assi
 ## Development environment
 
 The test environment overrides Home Assistant's cryptography and PyJWT pins
-with 50.0.1 and 2.15.0 respectively to address their security advisories. Its
-lockfile also uses patched urllib3 2.8.0. Tests retain the Home Assistant
+with 50.0.1 and 2.15.0 respectively to address their security advisories. It also
+overrides aiohttp to 3.14.4 and its yarl dependency to 1.25.1; the historical
+fixture's yarl pin cannot satisfy patched aiohttp's requirements. Its lockfile
+also uses patched urllib3 2.8.0. Tests retain the Home Assistant
 2026.8.0 compatibility baseline but do not use its stock dependency set.
 These changes apply to development and CI; HACS installs use the dependencies
 provided by the user's Home Assistant installation.

@@ -20,8 +20,14 @@ package = false
 required-version = ">=0.11.15,<0.13"
 prerelease = "allow"
 # Keep the HA 2026.8 compatibility fixture while replacing its vulnerable
-# cryptography and PyJWT pins in development/CI only, not HACS installs.
-override-dependencies = ["cryptography==50.0.1", "pyjwt==2.15.0"]
+# cryptography, PyJWT and aiohttp pins in development/CI only, not HACS installs.
+# Patched aiohttp also requires a newer yarl than the historical HA fixture.
+override-dependencies = [
+  "cryptography==50.0.1",
+  "pyjwt==2.15.0",
+  "aiohttp==3.14.4",
+  "yarl==1.25.1",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
