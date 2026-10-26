@@ -13,13 +13,13 @@ Contributions to the HACS custom integration are welcome. The built-in Home Assi
 ## Development environment
 
 The test environment overrides Home Assistant's cryptography and PyJWT pins
-with 50.0.1 and 2.15.0 respectively to address their security advisories. It also
-overrides aiohttp to 3.14.4 and its yarl dependency to 1.25.1; the historical
-fixture's yarl pin cannot satisfy patched aiohttp's requirements. Its lockfile
-also uses patched urllib3 2.8.0. Tests retain the Home Assistant
-2026.8.0 compatibility baseline but do not use its stock dependency set.
-These changes apply to development and CI; HACS installs use the dependencies
-provided by the user's Home Assistant installation.
+with 50.0.1 and 2.15.0 respectively, aiohttp with 3.14.4 and its yarl
+dependency with 1.25.1, and Pillow with 13.0.0. It also uses certifi 2026.10.23,
+uv 0.13.5 and urllib3 2.8.0 in the lockfile. The historical fixture's yarl
+pin cannot satisfy patched aiohttp's requirements. Tests retain the Home
+Assistant 2026.8.0 compatibility baseline but do not use its stock dependency
+set. These changes apply to development and CI; HACS installs use the
+dependencies provided by the user's Home Assistant installation.
 
 Install [uv](https://docs.astral.sh/uv/) and Python 3.14.2 or later in the
 Python 3.14 series, then create a locked environment:
@@ -71,6 +71,6 @@ suite with Home Assistant 2026.8.0 from the lockfile on Python 3.14.
 
 All contributed code is provided under the repository's [MIT Licence](LICENSE).
 
-The uv tooling range supports both the explicitly pinned CI version and the
-0.12-series version used by Dependabot. Keep the lockfile compatible with both;
-changing that tooling range or the CI pin remains a manually reviewed change.
+The uv tooling range and CI pin both require the patched 0.13 series. Keep the
+lockfile compatible with that range; changing the tooling range or CI pin
+remains a manually reviewed change.
