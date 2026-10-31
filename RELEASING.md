@@ -6,6 +6,34 @@ merge exception is the narrow Dependabot policy documented in CONTRIBUTING:
 individual stable patch/minor updates to allowlisted GitHub Actions or Ruff,
 with expected changed paths and every protected-branch check passing.
 
+Other pull requests are merged by the maintainer, or by a coding agent such as
+Claude Code when the maintainer asks it to, following
+[Merge a pull request](#merge-a-pull-request).
+
+## Merge a pull request
+
+Before an agent merges a pull request on the maintainer's behalf, it must:
+
+1. Confirm that every required check has passed on the pull request's current
+   head commit.
+2. Read every review, inline review comment and conversation comment, including
+   automated reviews such as Codex.
+3. Fix each actionable finding in a follow-up commit, rerun the affected local
+   checks, and wait for the required checks to pass again.
+4. Confirm that no review threads are unresolved, no changes are requested, and
+   the pull request can merge without bypassing the `main` ruleset.
+5. Squash-merge the pull request by number against the reviewed head commit,
+   for example `gh pr merge <number> --squash --match-head-commit <sha>`, with a
+   commit message that summarises the change and its verification. Without a
+   number, `gh` merges the pull request for the currently checked-out branch.
+
+If the agent cannot complete a step, or considers a finding incorrect or out of
+scope, it leaves the pull request open and explains what is outstanding to the
+maintainer. Agents never bypass branch rules or enable GitHub auto-merge. They
+tag and publish only a release the maintainer has asked for, following
+[Tag and publish](#tag-and-publish), and never update an installed Home
+Assistant environment.
+
 ## Monthly dependency review
 
 Review dependencies at least monthly and before a release:
@@ -37,8 +65,9 @@ an installed Home Assistant environment.
 
 5. Run Ruff, formatting, 100% config-flow coverage, and the complete test suite.
 6. Open a normal pull request to `main` and wait for every required check.
-7. Review the diff, test evidence, privacy impact, and release notes manually.
-8. Squash-merge the pull request manually.
+7. Review the diff, test evidence, privacy impact, and release notes.
+8. Squash-merge the pull request yourself, or ask an agent to merge it following
+   [Merge a pull request](#merge-a-pull-request).
 
 ## Tag and publish
 
