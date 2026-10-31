@@ -1,4 +1,4 @@
-"""Test the ScorpionTrack config flow."""
+"""Test the ScorpionTrack Portal config flow."""
 
 from __future__ import annotations
 
@@ -7,10 +7,11 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
-from homeassistant.config_entries import SOURCE_REAUTH, SOURCE_USER
+from homeassistant.config_entries import SOURCE_USER
 from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResult, FlowResultType
+from homeassistant.util.unit_system import US_CUSTOMARY_SYSTEM
 from pyscorpiontrack import (
     ScorpionTrackConnectionError as ScorpionTrackShareConnectionError,
 )
@@ -32,12 +33,27 @@ from custom_components.scorpiontrack_portal.account_api import (
 from custom_components.scorpiontrack_portal.const import (
     CONF_SETUP_TYPE,
     CONF_SHARE_TOKEN,
+    CONF_SPEED_UNIT,
     DOMAIN,
     SETUP_TYPE_ACCOUNT,
     SETUP_TYPE_SHARE,
     SHARE_DEFAULT_NAME,
 )
 from custom_components.scorpiontrack_portal.utils import stable_hash
+
+SHARE_ERRORS = [
+    (ScorpionTrackShareConnectionError("connection failed"), "cannot_connect"),
+    (ScorpionTrackInvalidTokenError("invalid token"), "invalid_token"),
+    (ScorpionTrackShareUnavailableError("share unavailable"), "share_unavailable"),
+    (Exception("unexpected"), "unknown"),
+]
+ACCOUNT_ERRORS = [
+    (ScorpionTrackAccountConnectionError("connection failed"), "cannot_connect"),
+    (ScorpionTrackAuthError("bad credentials"), "invalid_auth"),
+    (ScorpionTrackPortalError("unexpected response"), "unexpected_response"),
+    (Exception("unexpected"), "unknown"),
+]
+ACCOUNT_INPUT = {CONF_EMAIL: "owner@example.com", CONF_PASSWORD: "correct-password"}
 
 
 @pytest.fixture(autouse=True)
@@ -52,16 +68,14 @@ def prevent_entry_setup(monkeypatch: pytest.MonkeyPatch) -> None:
 async def _async_start_route(hass: HomeAssistant, route: str) -> FlowResult:
     """Start the user flow and select a setup route."""
     result = await hass.config_entries.flow.async_init(
-        DOMAIN,
-        context={"source": SOURCE_USER},
+        DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "user"
     assert result["menu_options"] == ["account", "share"]
 
     result = await hass.config_entries.flow.async_configure(
-        result["flow_id"],
-        {"next_step_id": route},
+        result["flow_id"], {"next_step_id": route}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == route
@@ -91,8 +105,23 @@ async def test_share_flow_creates_entry(
         CONF_SETUP_TYPE: SETUP_TYPE_SHARE,
         CONF_SHARE_TOKEN: "canonical-token",
     }
+    assert result["options"] == {CONF_SPEED_UNIT: "km/h"}
     assert result["result"].unique_id == "share_101"
     client_mocks.share.async_get_share.assert_awaited_once()
+
+
+async def test_share_flow_defaults_to_mph_for_us_customary_units(
+    hass: HomeAssistant,
+) -> None:
+    """The initial speed unit follows Home Assistant's unit system."""
+    hass.config.units = US_CUSTOMARY_SYSTEM
+    result = await _async_start_route(hass, "share")
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_SHARE_TOKEN: "canonical-token"}
+    )
+
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["options"] == {CONF_SPEED_UNIT: "mph"}
 
 
 @pytest.mark.parametrize("fallback", ["vehicle", "default"])
@@ -112,72 +141,59 @@ async def test_share_flow_title_fallbacks(
 
     result = await _async_start_route(hass, "share")
     result = await hass.config_entries.flow.async_configure(
-        result["flow_id"],
-        {CONF_SHARE_TOKEN: "canonical-token"},
+        result["flow_id"], {CONF_SHARE_TOKEN: "canonical-token"}
     )
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == expected_title
 
 
-@pytest.mark.parametrize("unique_id", ["share_101", "101"])
-async def test_share_flow_aborts_for_hacs_and_core_duplicates(
+async def test_share_flow_aborts_for_duplicate(
     hass: HomeAssistant,
-    unique_id: str,
+    share_config_entry: MockConfigEntry,
 ) -> None:
-    """Both HACS and Core forms of the share ID should prevent duplicates."""
-    MockConfigEntry(
-        domain=DOMAIN,
-        data={CONF_SHARE_TOKEN: "canonical-token"},
-        unique_id=unique_id,
-    ).add_to_hass(hass)
+    """The same shared location should not be configured twice."""
+    share_config_entry.add_to_hass(hass)
 
     result = await _async_start_route(hass, "share")
     result = await hass.config_entries.flow.async_configure(
-        result["flow_id"],
-        {CONF_SHARE_TOKEN: "canonical-token"},
+        result["flow_id"], {CONF_SHARE_TOKEN: "canonical-token"}
     )
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
 
 
-@pytest.mark.parametrize(
-    ("side_effect", "expected_error"),
-    [
-        (ScorpionTrackShareConnectionError("connection failed"), "cannot_connect"),
-        (ScorpionTrackInvalidTokenError("invalid token"), "invalid_token"),
-        (
-            ScorpionTrackShareUnavailableError("share unavailable"),
-            "share_unavailable",
-        ),
-        (Exception("unexpected"), "unknown"),
-    ],
-)
-async def test_share_flow_maps_validation_errors(
+@pytest.mark.parametrize(("side_effect", "expected_error"), SHARE_ERRORS)
+async def test_share_flow_recovers_from_validation_errors(
     hass: HomeAssistant,
     client_mocks: SimpleNamespace,
     side_effect: Exception,
     expected_error: str,
 ) -> None:
-    """Share validation errors should map to stable form errors."""
+    """Share validation errors keep the form and the flow can still finish."""
     client_mocks.share.async_get_share.side_effect = side_effect
     result = await _async_start_route(hass, "share")
     result = await hass.config_entries.flow.async_configure(
-        result["flow_id"],
-        {CONF_SHARE_TOKEN: "canonical-token"},
+        result["flow_id"], {CONF_SHARE_TOKEN: "canonical-token"}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "share"
     assert result["errors"] == {"base": expected_error}
 
+    client_mocks.share.async_get_share.side_effect = None
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_SHARE_TOKEN: "canonical-token"}
+    )
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+
 
 async def test_share_flow_recovers_after_malformed_input(
     hass: HomeAssistant,
     client_mocks: SimpleNamespace,
 ) -> None:
-    """The same flow should recover after an invalid pasted value."""
+    """The same flow should recover after an unparseable pasted value."""
     client_mocks.share_class.extract_token.side_effect = [
         ValueError("could not parse"),
         "canonical-token",
@@ -185,15 +201,13 @@ async def test_share_flow_recovers_after_malformed_input(
     result = await _async_start_route(hass, "share")
 
     result = await hass.config_entries.flow.async_configure(
-        result["flow_id"],
-        {CONF_SHARE_TOKEN: "not a share"},
+        result["flow_id"], {CONF_SHARE_TOKEN: "not a share"}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {"base": "invalid_token"}
 
     result = await hass.config_entries.flow.async_configure(
-        result["flow_id"],
-        {CONF_SHARE_TOKEN: "canonical-token"},
+        result["flow_id"], {CONF_SHARE_TOKEN: "canonical-token"}
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["result"].unique_id == "share_101"
@@ -205,12 +219,12 @@ async def test_account_flow_creates_entry(
 ) -> None:
     """Valid portal credentials should create an account entry."""
     result = await _async_start_route(hass, "account")
+    schema_keys = {marker.schema for marker in result["data_schema"].schema}
+    assert schema_keys == {CONF_EMAIL, CONF_PASSWORD, CONF_SHARE_TOKEN, CONF_SPEED_UNIT}
+
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"],
-        {
-            CONF_EMAIL: " OWNER@EXAMPLE.COM ",
-            CONF_PASSWORD: "correct-password",
-        },
+        {CONF_EMAIL: " OWNER@EXAMPLE.COM ", CONF_PASSWORD: "correct-password"},
     )
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
@@ -222,18 +236,7 @@ async def test_account_flow_creates_entry(
     }
     assert result["result"].unique_id == "account_42"
     client_mocks.account.async_refresh_account.assert_awaited_once()
-
-
-async def test_account_flow_offers_share_and_speed_options(
-    hass: HomeAssistant,
-) -> None:
-    """Account setup should offer an optional fast share feed and speed unit."""
-    result = await _async_start_route(hass, "account")
-
-    schema_keys = {marker.schema for marker in result["data_schema"].schema}
-    assert {CONF_EMAIL, CONF_PASSWORD, "share_token", "speed_unit"}.issubset(
-        schema_keys
-    )
+    client_mocks.share.async_get_share.assert_not_awaited()
 
 
 async def test_account_flow_creates_hybrid_entry(
@@ -245,10 +248,9 @@ async def test_account_flow_creates_hybrid_entry(
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"],
         {
-            CONF_EMAIL: "owner@example.com",
-            CONF_PASSWORD: "correct-password",
+            **ACCOUNT_INPUT,
             CONF_SHARE_TOKEN: "canonical-token",
-            "speed_unit": "km/h",
+            CONF_SPEED_UNIT: "mph",
         },
     )
 
@@ -257,28 +259,14 @@ async def test_account_flow_creates_hybrid_entry(
         CONF_SETUP_TYPE: SETUP_TYPE_ACCOUNT,
         CONF_EMAIL: "owner@example.com",
         CONF_PASSWORD: "correct-password",
-    }
-    assert result["options"] == {
         CONF_SHARE_TOKEN: "canonical-token",
-        "speed_unit": "km/h",
     }
-    client_mocks.account.async_refresh_account.assert_awaited_once()
+    assert result["options"] == {CONF_SPEED_UNIT: "mph"}
     client_mocks.share.async_get_share.assert_awaited_once()
 
 
-@pytest.mark.parametrize(
-    ("side_effect", "expected_error"),
-    [
-        (ScorpionTrackShareConnectionError("connection failed"), "cannot_connect"),
-        (ScorpionTrackInvalidTokenError("invalid token"), "invalid_token"),
-        (
-            ScorpionTrackShareUnavailableError("share unavailable"),
-            "share_unavailable",
-        ),
-        (Exception("unexpected"), "unknown"),
-    ],
-)
-async def test_account_flow_maps_optional_share_errors(
+@pytest.mark.parametrize(("side_effect", "expected_error"), SHARE_ERRORS)
+async def test_account_flow_recovers_from_optional_share_errors(
     hass: HomeAssistant,
     client_mocks: SimpleNamespace,
     side_effect: Exception,
@@ -287,120 +275,20 @@ async def test_account_flow_maps_optional_share_errors(
     """A bad optional share should not create a partially configured account."""
     client_mocks.share.async_get_share.side_effect = side_effect
     result = await _async_start_route(hass, "account")
+    user_input = {**ACCOUNT_INPUT, CONF_SHARE_TOKEN: "canonical-token"}
     result = await hass.config_entries.flow.async_configure(
-        result["flow_id"],
-        {
-            CONF_EMAIL: "owner@example.com",
-            CONF_PASSWORD: "correct-password",
-            CONF_SHARE_TOKEN: "canonical-token",
-            "speed_unit": "mph",
-        },
+        result["flow_id"], user_input
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {"base": expected_error}
 
-
-async def test_account_options_validate_share_and_update_speed_unit(
-    hass: HomeAssistant,
-    account_config_entry: MockConfigEntry,
-    client_mocks: SimpleNamespace,
-) -> None:
-    """Account options should add the share feed and change speed units."""
-    account_config_entry.add_to_hass(hass)
-
-    result = await hass.config_entries.options.async_init(account_config_entry.entry_id)
-    assert result["type"] is FlowResultType.FORM
-    assert result["step_id"] == "init"
-
-    result = await hass.config_entries.options.async_configure(
-        result["flow_id"],
-        {
-            CONF_SHARE_TOKEN: "canonical-token",
-            "speed_unit": "km/h",
-        },
+    client_mocks.share.async_get_share.side_effect = None
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], user_input
     )
-
     assert result["type"] is FlowResultType.CREATE_ENTRY
-    assert account_config_entry.options == {
-        CONF_SHARE_TOKEN: "canonical-token",
-        "speed_unit": "km/h",
-    }
-    client_mocks.share.async_get_share.assert_awaited_once()
-
-
-@pytest.mark.parametrize(
-    ("side_effect", "expected_error"),
-    [
-        (ScorpionTrackShareConnectionError("connection failed"), "cannot_connect"),
-        (ScorpionTrackInvalidTokenError("invalid token"), "invalid_token"),
-        (
-            ScorpionTrackShareUnavailableError("share unavailable"),
-            "share_unavailable",
-        ),
-        (Exception("unexpected"), "unknown"),
-    ],
-)
-async def test_account_options_map_share_errors(
-    hass: HomeAssistant,
-    account_config_entry: MockConfigEntry,
-    client_mocks: SimpleNamespace,
-    side_effect: Exception,
-    expected_error: str,
-) -> None:
-    """Account options should retain the form when share validation fails."""
-    account_config_entry.add_to_hass(hass)
-    client_mocks.share.async_get_share.side_effect = side_effect
-    result = await hass.config_entries.options.async_init(account_config_entry.entry_id)
-    result = await hass.config_entries.options.async_configure(
-        result["flow_id"],
-        {CONF_SHARE_TOKEN: "canonical-token", "speed_unit": "mph"},
-    )
-
-    assert result["type"] is FlowResultType.FORM
-    assert result["errors"] == {"base": expected_error}
-
-
-async def test_account_options_can_remove_share(
-    hass: HomeAssistant,
-    hybrid_account_config_entry: MockConfigEntry,
-) -> None:
-    """Clearing the optional share should restore account-only polling."""
-    hybrid_account_config_entry.add_to_hass(hass)
-    result = await hass.config_entries.options.async_init(
-        hybrid_account_config_entry.entry_id
-    )
-    result = await hass.config_entries.options.async_configure(
-        result["flow_id"],
-        {CONF_SHARE_TOKEN: "", "speed_unit": "mph"},
-    )
-
-    assert result["type"] is FlowResultType.CREATE_ENTRY
-    assert hybrid_account_config_entry.options == {
-        CONF_SHARE_TOKEN: "",
-        "speed_unit": "mph",
-    }
-
-
-async def test_share_options_update_speed_unit_without_reentering_token(
-    hass: HomeAssistant,
-    share_config_entry: MockConfigEntry,
-) -> None:
-    """Share entries should expose only their display speed preference."""
-    share_config_entry.add_to_hass(hass)
-
-    result = await hass.config_entries.options.async_init(share_config_entry.entry_id)
-    assert result["type"] is FlowResultType.FORM
-    assert result["step_id"] == "init"
-    schema_keys = {marker.schema for marker in result["data_schema"].schema}
-    assert schema_keys == {"speed_unit"}
-
-    result = await hass.config_entries.options.async_configure(
-        result["flow_id"], {"speed_unit": "km/h"}
-    )
-
-    assert result["type"] is FlowResultType.CREATE_ENTRY
-    assert share_config_entry.options == {"speed_unit": "km/h"}
+    assert result["data"][CONF_SHARE_TOKEN] == "canonical-token"
 
 
 async def test_account_flow_uses_hashed_email_without_user_id(
@@ -408,22 +296,17 @@ async def test_account_flow_uses_hashed_email_without_user_id(
     client_mocks: SimpleNamespace,
     mock_account: ScorpionTrackAccountData,
 ) -> None:
-    """Accounts without a portal user ID should retain a stable hashed ID."""
+    """Accounts without a portal user ID should use a stable hashed ID."""
     client_mocks.account.async_refresh_account.return_value = replace(
         mock_account, user_id=None
     )
     result = await _async_start_route(hass, "account")
     result = await hass.config_entries.flow.async_configure(
-        result["flow_id"],
-        {
-            CONF_EMAIL: "owner@example.com",
-            CONF_PASSWORD: "correct-password",
-        },
+        result["flow_id"], ACCOUNT_INPUT
     )
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
-    assert result["result"].unique_id.startswith("account_")
-    assert result["result"].unique_id != "account_42"
+    assert result["result"].unique_id == f"account_{stable_hash('owner@example.com')}"
 
 
 async def test_account_flow_aborts_for_duplicate(
@@ -434,46 +317,36 @@ async def test_account_flow_aborts_for_duplicate(
     account_config_entry.add_to_hass(hass)
     result = await _async_start_route(hass, "account")
     result = await hass.config_entries.flow.async_configure(
-        result["flow_id"],
-        {
-            CONF_EMAIL: "owner@example.com",
-            CONF_PASSWORD: "correct-password",
-        },
+        result["flow_id"], ACCOUNT_INPUT
     )
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
 
 
-@pytest.mark.parametrize(
-    ("side_effect", "expected_error"),
-    [
-        (ScorpionTrackAccountConnectionError("connection failed"), "cannot_connect"),
-        (ScorpionTrackAuthError("bad credentials"), "invalid_auth"),
-        (ScorpionTrackPortalError("unexpected response"), "unexpected_response"),
-        (Exception("unexpected"), "unknown"),
-    ],
-)
-async def test_account_flow_maps_validation_errors(
+@pytest.mark.parametrize(("side_effect", "expected_error"), ACCOUNT_ERRORS)
+async def test_account_flow_recovers_from_validation_errors(
     hass: HomeAssistant,
     client_mocks: SimpleNamespace,
     side_effect: Exception,
     expected_error: str,
 ) -> None:
-    """Account validation errors should map to stable form errors."""
+    """Account validation errors keep the form and the flow can still finish."""
     client_mocks.account.async_refresh_account.side_effect = side_effect
     result = await _async_start_route(hass, "account")
     result = await hass.config_entries.flow.async_configure(
-        result["flow_id"],
-        {
-            CONF_EMAIL: "owner@example.com",
-            CONF_PASSWORD: "wrong-password",
-        },
+        result["flow_id"], ACCOUNT_INPUT
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "account"
     assert result["errors"] == {"base": expected_error}
+
+    client_mocks.account.async_refresh_account.side_effect = None
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], ACCOUNT_INPUT
+    )
+    assert result["type"] is FlowResultType.CREATE_ENTRY
 
 
 async def _async_start_reauth(
@@ -481,11 +354,7 @@ async def _async_start_reauth(
 ) -> FlowResult:
     """Start an account reauthentication flow."""
     entry.add_to_hass(hass)
-    result = await hass.config_entries.flow.async_init(
-        DOMAIN,
-        context={"source": SOURCE_REAUTH, "entry_id": entry.entry_id},
-        data=entry.data,
-    )
+    result = await entry.start_reauth_flow(hass)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
     assert result["errors"] == {}
@@ -496,11 +365,10 @@ async def test_reauth_updates_password(
     hass: HomeAssistant,
     account_config_entry: MockConfigEntry,
 ) -> None:
-    """Successful reauthentication should update and keep the account identity."""
+    """Successful reauthentication should update the password only."""
     result = await _async_start_reauth(hass, account_config_entry)
     result = await hass.config_entries.flow.async_configure(
-        result["flow_id"],
-        {CONF_PASSWORD: "new-password"},
+        result["flow_id"], {CONF_PASSWORD: "new-password"}
     )
 
     assert result["type"] is FlowResultType.ABORT
@@ -509,7 +377,7 @@ async def test_reauth_updates_password(
     assert account_config_entry.unique_id == "account_42"
 
 
-async def test_reauth_rejects_different_account(
+async def test_reauth_aborts_for_different_account(
     hass: HomeAssistant,
     account_config_entry: MockConfigEntry,
     client_mocks: SimpleNamespace,
@@ -521,12 +389,11 @@ async def test_reauth_rejects_different_account(
     )
     result = await _async_start_reauth(hass, account_config_entry)
     result = await hass.config_entries.flow.async_configure(
-        result["flow_id"],
-        {CONF_PASSWORD: "different-account-password"},
+        result["flow_id"], {CONF_PASSWORD: "different-account-password"}
     )
 
-    assert result["type"] is FlowResultType.FORM
-    assert result["errors"] == {"base": "reauth_account_mismatch"}
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "wrong_account"
     assert account_config_entry.data[CONF_PASSWORD] == "correct-password"
 
 
@@ -545,11 +412,11 @@ async def test_reauth_keeps_fallback_identity_when_user_id_appears(
             CONF_PASSWORD: "old-password",
         },
         unique_id=fallback_unique_id,
+        minor_version=2,
     )
     result = await _async_start_reauth(hass, entry)
     result = await hass.config_entries.flow.async_configure(
-        result["flow_id"],
-        {CONF_PASSWORD: "new-password"},
+        result["flow_id"], {CONF_PASSWORD: "new-password"}
     )
 
     assert result["type"] is FlowResultType.ABORT
@@ -559,30 +426,206 @@ async def test_reauth_keeps_fallback_identity_when_user_id_appears(
     client_mocks.account.async_refresh_account.assert_awaited_once()
 
 
-@pytest.mark.parametrize(
-    ("side_effect", "expected_error"),
-    [
-        (ScorpionTrackAccountConnectionError("connection failed"), "cannot_connect"),
-        (ScorpionTrackAuthError("bad credentials"), "invalid_auth"),
-        (ScorpionTrackPortalError("unexpected response"), "unexpected_response"),
-        (Exception("unexpected"), "unknown"),
-    ],
-)
-async def test_reauth_maps_validation_errors(
+@pytest.mark.parametrize(("side_effect", "expected_error"), ACCOUNT_ERRORS)
+async def test_reauth_recovers_from_validation_errors(
     hass: HomeAssistant,
     account_config_entry: MockConfigEntry,
     client_mocks: SimpleNamespace,
     side_effect: Exception,
     expected_error: str,
 ) -> None:
-    """Reauthentication should retain its form for recoverable errors."""
+    """Reauthentication keeps its form for errors and can still finish."""
     client_mocks.account.async_refresh_account.side_effect = side_effect
     result = await _async_start_reauth(hass, account_config_entry)
     result = await hass.config_entries.flow.async_configure(
-        result["flow_id"],
-        {CONF_PASSWORD: "wrong-password"},
+        result["flow_id"], {CONF_PASSWORD: "wrong-password"}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
     assert result["errors"] == {"base": expected_error}
+
+    client_mocks.account.async_refresh_account.side_effect = None
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_PASSWORD: "new-password"}
+    )
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "reauth_successful"
+
+
+async def _async_start_reconfigure(
+    hass: HomeAssistant, entry: MockConfigEntry, step_id: str
+) -> FlowResult:
+    """Start a reconfigure flow for an entry."""
+    entry.add_to_hass(hass)
+    result = await entry.start_reconfigure_flow(hass)
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == step_id
+    assert result["errors"] == {}
+    return result
+
+
+async def test_reconfigure_account_adds_share(
+    hass: HomeAssistant,
+    account_config_entry: MockConfigEntry,
+    client_mocks: SimpleNamespace,
+) -> None:
+    """A portal account can gain an optional hybrid share."""
+    result = await _async_start_reconfigure(
+        hass, account_config_entry, "reconfigure_account"
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {CONF_SHARE_TOKEN: "https://app.scorpiontrack.com/s?token=canonical-token"},
+    )
+
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "reconfigure_successful"
+    assert account_config_entry.data[CONF_SHARE_TOKEN] == "canonical-token"
+    assert account_config_entry.data[CONF_PASSWORD] == "correct-password"
+    client_mocks.share.async_get_share.assert_awaited_once()
+
+
+async def test_reconfigure_account_removes_share(
+    hass: HomeAssistant,
+    hybrid_account_config_entry: MockConfigEntry,
+    client_mocks: SimpleNamespace,
+) -> None:
+    """Clearing the share returns a hybrid entry to account-only polling."""
+    result = await _async_start_reconfigure(
+        hass, hybrid_account_config_entry, "reconfigure_account"
+    )
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "reconfigure_successful"
+    assert CONF_SHARE_TOKEN not in hybrid_account_config_entry.data
+    assert hybrid_account_config_entry.data[CONF_EMAIL] == "owner@example.com"
+    client_mocks.share.async_get_share.assert_not_awaited()
+
+
+@pytest.mark.parametrize(("side_effect", "expected_error"), SHARE_ERRORS)
+async def test_reconfigure_account_recovers_from_share_errors(
+    hass: HomeAssistant,
+    account_config_entry: MockConfigEntry,
+    client_mocks: SimpleNamespace,
+    side_effect: Exception,
+    expected_error: str,
+) -> None:
+    """A failed share check keeps the form and the flow can still finish."""
+    client_mocks.share.async_get_share.side_effect = side_effect
+    result = await _async_start_reconfigure(
+        hass, account_config_entry, "reconfigure_account"
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_SHARE_TOKEN: "canonical-token"}
+    )
+
+    assert result["type"] is FlowResultType.FORM
+    assert result["errors"] == {"base": expected_error}
+    assert CONF_SHARE_TOKEN not in account_config_entry.data
+
+    client_mocks.share.async_get_share.side_effect = None
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_SHARE_TOKEN: "canonical-token"}
+    )
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "reconfigure_successful"
+
+
+async def test_reconfigure_share_updates_link(
+    hass: HomeAssistant,
+    share_config_entry: MockConfigEntry,
+    client_mocks: SimpleNamespace,
+    mock_share: ScorpionTrackShare,
+) -> None:
+    """A new link for the same share replaces the stored token."""
+    client_mocks.share.async_get_share.return_value = replace(
+        mock_share, token="replacement-token"
+    )
+    result = await _async_start_reconfigure(
+        hass, share_config_entry, "reconfigure_share"
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_SHARE_TOKEN: "replacement-token"}
+    )
+
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "reconfigure_successful"
+    assert share_config_entry.data[CONF_SHARE_TOKEN] == "replacement-token"
+
+
+async def test_reconfigure_share_rejects_different_share(
+    hass: HomeAssistant,
+    share_config_entry: MockConfigEntry,
+    client_mocks: SimpleNamespace,
+    mock_share: ScorpionTrackShare,
+) -> None:
+    """A link for another shared location must be added as a new entry."""
+    client_mocks.share.async_get_share.return_value = replace(
+        mock_share, id=202, token="other-token"
+    )
+    result = await _async_start_reconfigure(
+        hass, share_config_entry, "reconfigure_share"
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_SHARE_TOKEN: "other-token"}
+    )
+
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "wrong_share"
+    assert share_config_entry.data[CONF_SHARE_TOKEN] == "canonical-token"
+
+
+@pytest.mark.parametrize(("side_effect", "expected_error"), SHARE_ERRORS)
+async def test_reconfigure_share_recovers_from_validation_errors(
+    hass: HomeAssistant,
+    share_config_entry: MockConfigEntry,
+    client_mocks: SimpleNamespace,
+    side_effect: Exception,
+    expected_error: str,
+) -> None:
+    """A failed share check keeps the form and the flow can still finish."""
+    client_mocks.share.async_get_share.side_effect = side_effect
+    result = await _async_start_reconfigure(
+        hass, share_config_entry, "reconfigure_share"
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_SHARE_TOKEN: "canonical-token"}
+    )
+
+    assert result["type"] is FlowResultType.FORM
+    assert result["errors"] == {"base": expected_error}
+
+    client_mocks.share.async_get_share.side_effect = None
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_SHARE_TOKEN: "canonical-token"}
+    )
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "reconfigure_successful"
+
+
+@pytest.mark.parametrize(
+    "entry_fixture", ["share_config_entry", "account_config_entry"]
+)
+async def test_options_flow_updates_speed_unit(
+    hass: HomeAssistant,
+    request: pytest.FixtureRequest,
+    entry_fixture: str,
+) -> None:
+    """Both entry types expose only the display speed unit as an option."""
+    entry: MockConfigEntry = request.getfixturevalue(entry_fixture)
+    entry.add_to_hass(hass)
+
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "init"
+    schema_keys = {marker.schema for marker in result["data_schema"].schema}
+    assert schema_keys == {CONF_SPEED_UNIT}
+
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {CONF_SPEED_UNIT: "mph"}
+    )
+
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert entry.options == {CONF_SPEED_UNIT: "mph"}

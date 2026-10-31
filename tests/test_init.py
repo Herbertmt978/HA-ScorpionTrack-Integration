@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from dataclasses import replace
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, patch
 
 import pytest
 from homeassistant import loader
@@ -30,15 +29,13 @@ from custom_components.scorpiontrack_portal.account_api import (
 from custom_components.scorpiontrack_portal.account_api import (
     ScorpionTrackConnectionError as ScorpionTrackAccountConnectionError,
 )
-from custom_components.scorpiontrack_portal.account_coordinator import (
-    ScorpionTrackAccountCoordinator,
-)
 from custom_components.scorpiontrack_portal.const import (
     CONF_SETUP_TYPE,
     CONF_SHARE_TOKEN,
     DOMAIN,
 )
-from custom_components.scorpiontrack_portal.share_coordinator import (
+from custom_components.scorpiontrack_portal.coordinator import (
+    ScorpionTrackAccountCoordinator,
     ScorpionTrackShareCoordinator,
 )
 from custom_components.scorpiontrack_portal.utils import stable_hash
@@ -86,22 +83,6 @@ async def test_setup_runtime_data_entity_count_and_unload(
     assert entry.state is ConfigEntryState.NOT_LOADED
 
 
-async def test_core_share_entry_without_setup_type_is_compatible(
-    hass: HomeAssistant,
-) -> None:
-    """A share entry created by Core should load under the richer override."""
-    entry = MockConfigEntry(
-        domain=DOMAIN,
-        title="Family Cars",
-        data={CONF_SHARE_TOKEN: "canonical-token"},
-        unique_id="101",
-    )
-    await setup_integration(hass, entry)
-
-    assert entry.state is ConfigEntryState.LOADED
-    assert isinstance(entry.runtime_data, ScorpionTrackShareCoordinator)
-
-
 async def test_hybrid_account_uses_fast_share_coordinator_interval(
     hass: HomeAssistant,
     hybrid_account_config_entry: MockConfigEntry,
@@ -117,31 +98,54 @@ async def test_hybrid_account_uses_fast_share_coordinator_interval(
     client_mocks.share.async_get_share.assert_awaited_once()
 
 
-async def test_options_update_reloads_entry(
+@pytest.mark.parametrize(
+    ("options", "expected_share_token"),
+    [
+        ({"share_token": " canonical-token ", "speed_unit": "km/h"}, "canonical-token"),
+        ({"share_token": "", "speed_unit": "km/h"}, None),
+        ({"speed_unit": "km/h"}, None),
+    ],
+)
+async def test_migrate_hybrid_share_token_into_entry_data(
     hass: HomeAssistant,
-    account_config_entry: MockConfigEntry,
+    options: dict[str, str],
+    expected_share_token: str | None,
 ) -> None:
-    """Changing speed/share options should reload the active entry."""
-    with patch.object(
-        hass.config_entries,
-        "async_reload",
-        AsyncMock(return_value=True),
-    ) as reload_entry:
-        from custom_components.scorpiontrack_portal import _async_reload_entry
-
-        await _async_reload_entry(hass, account_config_entry)
-
-    reload_entry.assert_awaited_once_with(account_config_entry.entry_id)
-
-
-async def test_unknown_entry_type_fails_cleanly(hass: HomeAssistant) -> None:
-    """Malformed legacy entries should fail setup instead of raising ValueError."""
+    """Version 1.1 entries keep their optional share token as connection data."""
     entry = MockConfigEntry(
         domain=DOMAIN,
-        data={CONF_SETUP_TYPE: "unsupported"},
+        title="ScorpionTrack (Owner)",
+        data={
+            CONF_SETUP_TYPE: "account",
+            CONF_EMAIL: "owner@example.com",
+            CONF_PASSWORD: "correct-password",
+        },
+        options=options,
+        unique_id="account_42",
+        minor_version=1,
     )
     await setup_integration(hass, entry)
-    assert entry.state is ConfigEntryState.SETUP_ERROR
+
+    assert entry.state is ConfigEntryState.LOADED
+    assert entry.minor_version == 2
+    assert entry.data.get(CONF_SHARE_TOKEN) == expected_share_token
+    assert entry.options == {"speed_unit": "km/h"}
+    assert (entry.runtime_data.share_client is not None) is (
+        expected_share_token is not None
+    )
+
+
+async def test_migration_from_future_version_fails(hass: HomeAssistant) -> None:
+    """An entry from a newer major version must not be downgraded."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={CONF_SETUP_TYPE: "share", CONF_SHARE_TOKEN: "canonical-token"},
+        unique_id="share_101",
+        version=2,
+    )
+    await setup_integration(hass, entry)
+
+    assert entry.state is ConfigEntryState.MIGRATION_ERROR
 
 
 @pytest.mark.parametrize(

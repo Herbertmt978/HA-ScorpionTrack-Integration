@@ -12,6 +12,9 @@ test = [
 lint = [
   "ruff==0.16.9",
 ]
+typing = [
+  "mypy==2.1.0",
+]
 
 [tool.uv]
 package = false
@@ -37,6 +40,36 @@ asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 timeout = 10
 addopts = "-ra --strict-config --strict-markers"
+
+[tool.mypy]
+# Mirrors Home Assistant Core's strict typing settings for integrations.
+python_version = "3.14"
+files = ["custom_components/scorpiontrack_portal"]
+show_error_codes = true
+follow_imports = "normal"
+local_partial_types = true
+strict_equality = true
+strict_bytes = true
+no_implicit_optional = true
+no_implicit_reexport = true
+warn_incomplete_stub = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_return_any = true
+warn_unreachable = true
+check_untyped_defs = true
+disallow_incomplete_defs = true
+disallow_subclassing_any = true
+disallow_untyped_calls = true
+disallow_untyped_decorators = true
+disallow_untyped_defs = true
+enable_error_code = [
+  "deprecated",
+  "ignore-without-code",
+  "redundant-self",
+  "truthy-iterable",
+]
+disable_error_code = ["annotation-unchecked", "import-not-found", "import-untyped"]
 
 [tool.coverage.run]
 source = ["custom_components/scorpiontrack_portal"]

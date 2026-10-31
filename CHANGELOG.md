@@ -4,7 +4,25 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
-No changes yet.
+### Added
+
+- Reconfigure: add, replace or remove a portal account's hybrid share link, or give a shared-location entry a new link for the same share.
+- Authentication failures during a switch or button action now start reauthentication.
+
+### Changed
+
+- The hybrid share link moved from the entry options to its connection data (config entry version 1.2, migrated automatically). `Configure` now only sets the speed unit and reloads the entry itself.
+- Reauthentication with credentials for a different account now aborts instead of showing an error.
+- Devices for vehicles removed from an account or share are removed. Vehicles that return are recreated, which previously did not happen.
+- Switch and button actions run one at a time per platform; the previous concurrency setting was ignored.
+- Portal and fleet API failures are logged at debug level, and logs no longer include the account's email address. The optional hybrid share logs once when it fails and once when it recovers.
+- Switch errors now name the failing control through a translation.
+
+### Developer
+
+- Restructure the integration into Home Assistant's standard `coordinator.py`, `entity.py` and single platform modules.
+- Add strict mypy, using Home Assistant Core's settings, to the required test job.
+- Remove compatibility code for Core-created entries, which cannot exist under the `scorpiontrack_portal` domain.
 
 ## 0.4.0 - 2026-10-31
 

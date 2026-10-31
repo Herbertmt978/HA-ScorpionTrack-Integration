@@ -311,7 +311,7 @@ async def test_login_failure_log_does_not_expose_portal_user_id(
     session = _ScriptedSession(_login_responses(user_id=internal_user_id, api_key=""))
     client = _client(session)
     caplog.set_level(
-        logging.WARNING, logger="custom_components.scorpiontrack_portal.account_api"
+        logging.DEBUG, logger="custom_components.scorpiontrack_portal.account_api"
     )
 
     with pytest.raises(ScorpionTrackPortalError, match="fleet API details"):

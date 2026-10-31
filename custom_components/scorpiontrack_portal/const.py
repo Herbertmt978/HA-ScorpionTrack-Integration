@@ -1,4 +1,4 @@
-"""Constants for the ScorpionTrack integration."""
+"""Constants for the ScorpionTrack Portal integration."""
 
 from __future__ import annotations
 
@@ -9,7 +9,6 @@ from typing import Any
 from homeassistant.const import Platform, UnitOfSpeed
 
 DOMAIN = "scorpiontrack_portal"
-DEFAULT_NAME = "ScorpionTrack Portal"
 ACCOUNT_DEFAULT_NAME = "ScorpionTrack Account"
 SHARE_DEFAULT_NAME = "ScorpionTrack Share"
 MANUFACTURER = "ScorpionTrack"
@@ -46,30 +45,6 @@ PLATFORMS: tuple[Platform, ...] = (
     Platform.SWITCH,
     Platform.BUTTON,
 )
-
-
-def get_setup_type(data: Mapping[str, Any]) -> str | None:
-    """Return the configured source type, including legacy/Core entries."""
-    setup_type = data.get(CONF_SETUP_TYPE)
-    if setup_type in (SETUP_TYPE_ACCOUNT, SETUP_TYPE_SHARE):
-        return setup_type
-
-    if CONF_SHARE_TOKEN in data:
-        return SETUP_TYPE_SHARE
-
-    return None
-
-
-def get_share_token(data: Mapping[str, Any], options: Mapping[str, Any]) -> str | None:
-    """Return an optional share token, allowing options to remove a prior value."""
-    value = (
-        options[CONF_SHARE_TOKEN]
-        if CONF_SHARE_TOKEN in options
-        else data.get(CONF_SHARE_TOKEN)
-    )
-    if not isinstance(value, str):
-        return None
-    return value.strip() or None
 
 
 def get_speed_unit(

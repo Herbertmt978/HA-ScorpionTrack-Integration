@@ -197,6 +197,7 @@ def share_config_entry() -> MockConfigEntry:
         },
         unique_id="share_101",
         entry_id="01SCORPIONTRACK_SHARE_TEST",
+        minor_version=2,
     )
 
 
@@ -213,6 +214,7 @@ def account_config_entry() -> MockConfigEntry:
         },
         unique_id="account_42",
         entry_id="01SCORPIONTRACK_ACCOUNT_TEST",
+        minor_version=2,
     )
 
 
@@ -226,13 +228,12 @@ def hybrid_account_config_entry() -> MockConfigEntry:
             CONF_SETUP_TYPE: SETUP_TYPE_ACCOUNT,
             CONF_EMAIL: "owner@example.com",
             CONF_PASSWORD: "correct-password",
+            CONF_SHARE_TOKEN: "canonical-token",
         },
-        options={
-            "share_token": "canonical-token",
-            "speed_unit": "km/h",
-        },
+        options={"speed_unit": "km/h"},
         unique_id="account_42",
         entry_id="01SCORPIONTRACK_HYBRID_TEST",
+        minor_version=2,
     )
 
 

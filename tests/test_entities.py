@@ -10,6 +10,7 @@ from typing import Any
 import pytest
 from homeassistant.const import STATE_UNAVAILABLE
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from pyscorpiontrack import ScorpionTrackConnectionError, ScorpionTrackShare
 from pytest_homeassistant_custom_component.common import (
@@ -18,32 +19,22 @@ from pytest_homeassistant_custom_component.common import (
 )
 
 from custom_components.scorpiontrack_portal.account_api import ScorpionTrackAccountData
-from custom_components.scorpiontrack_portal.account_binary_sensor import (
-    VEHICLE_BINARY_SENSOR_DESCRIPTIONS as ACCOUNT_BINARY_SENSORS,
-)
-from custom_components.scorpiontrack_portal.account_sensor import (
-    ACCOUNT_SENSOR_DESCRIPTIONS,
-)
-from custom_components.scorpiontrack_portal.account_sensor import (
-    VEHICLE_SENSOR_DESCRIPTIONS as ACCOUNT_VEHICLE_SENSORS,
-)
-from custom_components.scorpiontrack_portal.account_switch import (
-    VEHICLE_SWITCH_DESCRIPTIONS,
+from custom_components.scorpiontrack_portal.binary_sensor import (
+    ACCOUNT_BINARY_SENSORS,
+    SHARE_BINARY_SENSORS,
 )
 from custom_components.scorpiontrack_portal.const import (
     ACCOUNT_SCAN_INTERVAL,
     DOMAIN,
     SHARE_SCAN_INTERVAL,
 )
-from custom_components.scorpiontrack_portal.share_binary_sensor import (
-    BINARY_SENSOR_DESCRIPTIONS as SHARE_BINARY_SENSORS,
+from custom_components.scorpiontrack_portal.sensor import (
+    ACCOUNT_SENSORS,
+    ACCOUNT_VEHICLE_SENSORS,
+    SHARE_SENSORS,
+    SHARE_VEHICLE_SENSORS,
 )
-from custom_components.scorpiontrack_portal.share_sensor import (
-    SENSOR_DESCRIPTIONS as SHARE_VEHICLE_SENSORS,
-)
-from custom_components.scorpiontrack_portal.share_sensor import (
-    SHARE_SENSOR_DESCRIPTIONS,
-)
+from custom_components.scorpiontrack_portal.switch import SWITCHES
 
 from . import setup_integration
 
@@ -82,7 +73,7 @@ async def test_share_unique_ids_and_tracker_state(
         "101_2001_tracker",
         *(f"101_2001_{description.key}" for description in SHARE_VEHICLE_SENSORS),
         *(f"101_2001_{description.key}" for description in SHARE_BINARY_SENSORS),
-        *(f"101_share_{description.key}" for description in SHARE_SENSOR_DESCRIPTIONS),
+        *(f"101_share_{description.key}" for description in SHARE_SENSORS),
     }
     actual_unique_ids = {
         entry.unique_id
@@ -121,10 +112,10 @@ async def test_account_unique_ids_and_tracker_state(
     expected_unique_ids = {
         "42_2001_tracker",
         "42_mark_alerts_read",
-        *(f"42_{description.key}" for description in ACCOUNT_SENSOR_DESCRIPTIONS),
+        *(f"42_{description.key}" for description in ACCOUNT_SENSORS),
         *(f"42_2001_{description.key}" for description in ACCOUNT_VEHICLE_SENSORS),
         *(f"42_2001_{description.key}" for description in ACCOUNT_BINARY_SENSORS),
-        *(f"42_2001_{description.key}" for description in VEHICLE_SWITCH_DESCRIPTIONS),
+        *(f"42_2001_{description.key}" for description in SWITCHES),
     }
     actual_unique_ids = {
         entry.unique_id
@@ -389,59 +380,57 @@ async def test_hybrid_does_not_replace_newer_account_position(
     assert tracker.attributes["latitude"] == 51.5074
 
 
-async def test_share_removed_vehicle_becomes_unavailable_and_recovers(
+async def test_share_removed_vehicle_device_is_removed_and_recreated(
     hass: HomeAssistant,
     freezer: Any,
     caplog: pytest.LogCaptureFixture,
+    device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     share_config_entry: MockConfigEntry,
     client_mocks: SimpleNamespace,
     mock_share: ScorpionTrackShare,
 ) -> None:
-    """Removed vehicles should be safe, unavailable, and recover by ID."""
+    """A vehicle removed from the share loses its device until it returns."""
     await setup_integration(hass, share_config_entry)
-    tracker_id = _entity_id(entity_registry, "device_tracker", "101_2001_tracker")
+    assert device_registry.async_get_device(identifiers={(DOMAIN, "101_2001")})
+    assert device_registry.async_get_device(identifiers={(DOMAIN, "share_101")})
 
     client_mocks.share.async_get_share.return_value = replace(mock_share, vehicles=())
     await _async_advance_poll(hass, freezer, SHARE_SCAN_INTERVAL)
-    state = hass.states.get(tracker_id)
-    assert state is not None
-    assert state.state == STATE_UNAVAILABLE
-    vehicle_entries = [
+
+    assert device_registry.async_get_device(identifiers={(DOMAIN, "101_2001")}) is None
+    assert device_registry.async_get_device(identifiers={(DOMAIN, "share_101")})
+    assert not [
         entry
         for entry in er.async_entries_for_config_entry(
             entity_registry, share_config_entry.entry_id
         )
         if entry.unique_id.startswith("101_2001_")
     ]
-    assert vehicle_entries
-    assert all(
-        (state := hass.states.get(entry.entity_id)) is not None
-        and state.state == STATE_UNAVAILABLE
-        for entry in vehicle_entries
-    )
     assert "Unexpected error updating listener" not in caplog.text
 
     client_mocks.share.async_get_share.return_value = mock_share
     await _async_advance_poll(hass, freezer, SHARE_SCAN_INTERVAL)
+
+    tracker_id = _entity_id(entity_registry, "device_tracker", "101_2001_tracker")
     state = hass.states.get(tracker_id)
     assert state is not None
-    assert state.state != STATE_UNAVAILABLE
     assert state.attributes["latitude"] == 51.5074
 
 
-async def test_account_removed_vehicle_becomes_unavailable_and_recovers(
+async def test_account_removed_vehicle_device_is_removed_and_recreated(
     hass: HomeAssistant,
     freezer: Any,
     caplog: pytest.LogCaptureFixture,
+    device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     account_config_entry: MockConfigEntry,
     client_mocks: SimpleNamespace,
     mock_account: ScorpionTrackAccountData,
 ) -> None:
-    """Account entities should tolerate a temporarily absent vehicle."""
+    """A vehicle removed from the account loses its device until it returns."""
     await setup_integration(hass, account_config_entry)
-    tracker_id = _entity_id(entity_registry, "device_tracker", "42_2001_tracker")
+    assert device_registry.async_get_device(identifiers={(DOMAIN, "42_vehicle_2001")})
 
     client_mocks.account.async_refresh_account.return_value = replace(
         mock_account,
@@ -449,21 +438,15 @@ async def test_account_removed_vehicle_becomes_unavailable_and_recovers(
         fetched_at=datetime.now(UTC),
     )
     await _async_advance_poll(hass, freezer, ACCOUNT_SCAN_INTERVAL)
-    state = hass.states.get(tracker_id)
-    assert state is not None
-    assert state.state == STATE_UNAVAILABLE
-    vehicle_entries = [
-        entry
-        for entry in er.async_entries_for_config_entry(
-            entity_registry, account_config_entry.entry_id
-        )
-        if entry.unique_id.startswith("42_2001_")
-    ]
-    assert vehicle_entries
-    assert all(
-        (state := hass.states.get(entry.entity_id)) is not None
-        and state.state == STATE_UNAVAILABLE
-        for entry in vehicle_entries
+
+    assert (
+        device_registry.async_get_device(identifiers={(DOMAIN, "42_vehicle_2001")})
+        is None
+    )
+    assert device_registry.async_get_device(identifiers={(DOMAIN, "account_42")})
+    assert (
+        entity_registry.async_get_entity_id("device_tracker", DOMAIN, "42_2001_tracker")
+        is None
     )
     assert "Unexpected error updating listener" not in caplog.text
 
@@ -471,6 +454,8 @@ async def test_account_removed_vehicle_becomes_unavailable_and_recovers(
         mock_account, fetched_at=datetime.now(UTC)
     )
     await _async_advance_poll(hass, freezer, ACCOUNT_SCAN_INTERVAL)
+
+    tracker_id = _entity_id(entity_registry, "device_tracker", "42_2001_tracker")
     state = hass.states.get(tracker_id)
     assert state is not None
     assert state.state != STATE_UNAVAILABLE

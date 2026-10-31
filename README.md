@@ -152,12 +152,14 @@ Portal-account mode provides:
 The portal account feed can return location data less frequently than Home Assistant polls it. To retain account alerts and controls while receiving newer live vehicle data:
 
 1. Create a ScorpionTrack location share containing the same vehicle or vehicles.
-2. Open the ScorpionTrack Portal config entry and select `Configure`.
-3. Paste the share URL or token, choose `mph` or `km/h`, and save.
+2. Open the ScorpionTrack Portal config entry's three-dot menu and select `Reconfigure`.
+3. Paste the share URL or token and submit.
 
 Hybrid mode continues to refresh authenticated account data every 5 minutes. It refreshes the optional share every 2 minutes and overlays only a position that is at least as recent as the account position. Vehicle IDs are matched first, with a unique normalized registration as a fallback. Location, speed, heading, ignition, and derived status can therefore update faster without duplicating account devices or entities.
 
-If the optional share temporarily fails, the entry remains available, retains its last newer live position, and continues using portal data for account metadata and controls. Remove the share from `Configure` to return to account-only polling.
+If the optional share temporarily fails, the entry remains available, retains its last newer live position, and continues using portal data for account metadata and controls. It logs once when the share becomes unavailable and once when it recovers. To return to account-only polling, select `Reconfigure` and clear the share.
+
+A shared-location entry can also be given a new link for the same share from `Reconfigure`, for example after the old link expires. A link for a different share must be added as a new entry.
 
 `Armed Mode` remains read-only because the current portal endpoint reports it but does not reliably accept a true toggle.
 
@@ -187,7 +189,9 @@ Changing the speed-unit option reloads the config entry and updates every speed 
 
 Alert coordinates use alert-specific attribute names rather than generic `latitude` and `longitude` attributes. This prevents alert sensors from appearing as additional vehicle markers.
 
-Only controls verified to behave as true on/off operations are writable.
+Only controls verified to behave as true on/off operations are writable. If the portal rejects the stored credentials during an action, Home Assistant asks you to sign in again.
+
+New vehicles in the account or share are added automatically. When a vehicle is removed from the account or share, its device and entities are removed; they are recreated if it returns.
 
 ## Update, roll back, or remove
 
@@ -241,7 +245,7 @@ Removing repository files from HACS does not remove related Home Assistant confi
 - Share mode stores the share token in the config entry.
 - Fleet requests are restricted to HTTPS Scorpion/ScorpionTrack hosts, do not follow redirects, and reject absolute request paths.
 - Diagnostics use an explicit allowlist of counts and capability flags. They exclude credentials, tokens, account and vehicle identifiers, registrations, alert contents, alert timestamps, addresses, and coordinates.
-- Expected authentication and connection failures are converted into concise categories. Routine logs can include a masked email address, HTTP status, method, and sanitized endpoint path, but not passwords, API keys, full tokens, full email addresses, or numeric account and vehicle identifiers.
+- Expected authentication and connection failures are converted into concise categories. Debug logs can include the HTTP status, method, and sanitized endpoint path, but not email addresses, passwords, API keys, full tokens, or numeric account and vehicle identifiers. Portal and fleet API failures are logged at debug level; Home Assistant reports an outage once and logs when it recovers.
 - Unexpected exceptions and dependency logs can still contain technical or identifying information. Review and redact every log or diagnostics file before sharing it.
 
 Report security problems privately through the repository's [security advisory form](https://github.com/Herbertmt978/HA-ScorpionTrack-Integration/security/advisories/new). Do not include secrets or current locations in a public issue. See [SECURITY.md](SECURITY.md) for the supported-version policy.
@@ -281,7 +285,7 @@ Support for this custom integration belongs in this repository, not in the Home 
 
 ## Development
 
-The test suite targets Home Assistant 2026.8.0 on Python 3.14. CI requires 100% config-flow coverage and at least 95% overall integration coverage.
+The test suite targets Home Assistant 2026.8.0 on Python 3.14. CI requires strict mypy with Home Assistant Core's settings, 100% config-flow coverage and at least 95% overall integration coverage.
 
 Authenticated portal behaviour is documented in [docs/portal-notes.md](docs/portal-notes.md). Development commands and privacy requirements are in [CONTRIBUTING.md](CONTRIBUTING.md), changes are recorded in [CHANGELOG.md](CHANGELOG.md), and the manual publishing process is in [RELEASING.md](RELEASING.md).
 

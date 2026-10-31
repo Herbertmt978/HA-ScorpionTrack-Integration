@@ -1,10 +1,9 @@
 {
-  "title": "ScorpionTrack Portal",
   "config": {
     "step": {
       "user": {
         "title": "Choose setup type",
-        "description": "ScorpionTrack can be connected either with your portal account for the richer integration or with a shared-location link for lightweight read-only tracking.",
+        "description": "Connect a ScorpionTrack portal account for alerts, controls and richer vehicle data, or a shared-location link for read-only tracking.",
         "menu_options": {
           "account": "Portal account",
           "share": "Shared location link"
@@ -20,7 +19,10 @@
           "speed_unit": "Speed unit"
         },
         "data_description": {
-          "share_token": "Optional: add a share containing the same vehicle(s) to refresh live location, speed, heading, ignition, and status every two minutes."
+          "email": "The email address you use to sign in to the ScorpionTrack portal.",
+          "password": "The password for that portal account.",
+          "share_token": "Optional: a share containing the same vehicles refreshes live location, speed, heading, ignition and status every two minutes.",
+          "speed_unit": "The unit used for speed sensors."
         }
       },
       "share": {
@@ -31,7 +33,8 @@
           "speed_unit": "Speed unit"
         },
         "data_description": {
-          "share_token": "Paste the full ScorpionTrack shared-location URL or just the token itself."
+          "share_token": "Paste the full ScorpionTrack shared-location URL or just the token itself.",
+          "speed_unit": "The unit used for speed sensors."
         }
       },
       "reauth_confirm": {
@@ -39,6 +42,29 @@
         "description": "Enter the current password for {email}.",
         "data": {
           "password": "Password"
+        },
+        "data_description": {
+          "password": "The current password for this ScorpionTrack portal account."
+        }
+      },
+      "reconfigure_account": {
+        "title": "Update the optional share link",
+        "description": "Add, replace or remove the shared-location link used for faster live positions. Leave it blank to use portal-account data only.",
+        "data": {
+          "share_token": "Share URL or token (optional)"
+        },
+        "data_description": {
+          "share_token": "A share containing the same vehicles as this account."
+        }
+      },
+      "reconfigure_share": {
+        "title": "Update a ScorpionTrack share",
+        "description": "Enter a link for the same shared location. A different share must be added as a new integration entry.",
+        "data": {
+          "share_token": "Share URL or token"
+        },
+        "data_description": {
+          "share_token": "Paste the full ScorpionTrack shared-location URL or just the token itself."
         }
       }
     },
@@ -47,26 +73,27 @@
       "invalid_auth": "Your ScorpionTrack username or password is incorrect, or the portal asked for an extra verification step that this integration cannot complete.",
       "invalid_token": "Your shared-location link is invalid or incomplete.",
       "share_unavailable": "Your shared-location link is invalid, expired, has been revoked, or no longer returns data.",
-      "reauth_account_mismatch": "These credentials belong to a different ScorpionTrack account.",
       "unexpected_response": "ScorpionTrack returned something unexpected. Turn on debug logging and try again.",
       "unknown": "An unexpected error occurred."
     },
     "abort": {
       "already_configured": "This ScorpionTrack source is already configured.",
-      "reauth_successful": "Your ScorpionTrack credentials have been updated."
+      "reauth_successful": "Your ScorpionTrack credentials have been updated.",
+      "reconfigure_successful": "The ScorpionTrack share link has been updated.",
+      "wrong_account": "These credentials belong to a different ScorpionTrack account.",
+      "wrong_share": "This link belongs to a different shared location. Add it as a new integration entry instead."
     }
   },
   "options": {
     "step": {
       "init": {
-        "title": "ScorpionTrack options",
-        "description": "Choose how speed is displayed. Portal-account entries can also add, replace, or remove an optional shared-location feed for faster live updates.",
+        "title": "ScorpionTrack Portal options",
+        "description": "Choose how speed is displayed.",
         "data": {
-          "share_token": "Share URL or token (optional)",
           "speed_unit": "Speed unit"
         },
         "data_description": {
-          "share_token": "Leave blank to use portal-account data only. The share should contain the same vehicle(s) as the account."
+          "speed_unit": "The unit used for speed sensors."
         }
       }
     }
@@ -84,17 +111,17 @@
     "mark_alerts_read_failed": {
       "message": "ScorpionTrack could not mark the alerts as read."
     },
+    "privacy_mode_update_failed": {
+      "message": "ScorpionTrack could not update Privacy Mode."
+    },
     "share_unavailable": {
       "message": "The shared location is unavailable."
     },
     "unexpected_response": {
       "message": "ScorpionTrack returned an unexpected response."
     },
-    "unsupported_setup_type": {
-      "message": "The ScorpionTrack configuration source is not supported."
-    },
-    "vehicle_mode_update_failed": {
-      "message": "ScorpionTrack could not update {mode}."
+    "zero_speed_mode_update_failed": {
+      "message": "ScorpionTrack could not update Zero-Speed Mode."
     }
   }
 }
