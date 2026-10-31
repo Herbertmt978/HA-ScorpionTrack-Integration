@@ -56,8 +56,8 @@ async def test_custom_integration_is_loaded(hass: HomeAssistant) -> None:
 @pytest.mark.parametrize(
     ("entry_fixture", "coordinator_type", "expected_entities"),
     [
-        ("share_config_entry", ScorpionTrackShareCoordinator, 7),
-        ("account_config_entry", ScorpionTrackAccountCoordinator, 31),
+        ("share_config_entry", ScorpionTrackShareCoordinator, 13),
+        ("account_config_entry", ScorpionTrackAccountCoordinator, 53),
     ],
 )
 async def test_setup_runtime_data_entity_count_and_unload(
@@ -197,7 +197,10 @@ async def test_migrate_removes_entities_no_longer_provided(
     removed: list[tuple[str, str]],
     kept: list[tuple[str, str]],
 ) -> None:
-    """Upgrading to 1.3 removes only the registry entries for retired entities."""
+    """Upgrading to 1.3 removes only the registry entries for retired entities.
+
+    Their replacements, under new unique IDs, are disabled by default.
+    """
     fixture_entry: MockConfigEntry = request.getfixturevalue(entry_fixture)
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -218,6 +221,13 @@ async def test_migrate_removes_entities_no_longer_provided(
     assert entry.minor_version == 3
     for domain, unique_id in removed:
         assert entity_registry.async_get_entity_id(domain, DOMAIN, unique_id) is None
+        replacement_id = entity_registry.async_get_entity_id(
+            domain, DOMAIN, f"{unique_id}_v2"
+        )
+        assert replacement_id is not None
+        replacement = entity_registry.async_get(replacement_id)
+        assert replacement is not None
+        assert replacement.disabled_by is er.RegistryEntryDisabler.INTEGRATION
     for domain, unique_id in kept:
         assert entity_registry.async_get_entity_id(domain, DOMAIN, unique_id)
 

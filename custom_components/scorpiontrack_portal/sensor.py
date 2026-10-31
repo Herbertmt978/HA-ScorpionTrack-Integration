@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import UTC, date, datetime
+from itertools import chain
 from typing import override
 
 from homeassistant.components.sensor import (
@@ -15,6 +16,7 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.const import (
     DEGREE,
+    MAX_LENGTH_STATE_STATE,
     EntityCategory,
     UnitOfElectricCurrent,
     UnitOfElectricPotential,
@@ -99,6 +101,29 @@ def _as_date(value: date | datetime | None) -> date | None:
     return value
 
 
+def _utc(value: datetime | None) -> datetime | None:
+    """Return a share time, reading one sent without a time zone as UTC."""
+    if value is None or value.tzinfo is not None:
+        return value
+    return value.replace(tzinfo=UTC)
+
+
+def _text(value: str | None) -> str | None:
+    """Return portal text cut to the longest state Home Assistant accepts."""
+    return value[:MAX_LENGTH_STATE_STATE] if value else None
+
+
+def _location(
+    address: str | None, latitude: float | None, longitude: float | None
+) -> str | None:
+    """Return the address, or the coordinates when there is no address."""
+    if address:
+        return _text(address)
+    if latitude is not None and longitude is not None:
+        return f"{latitude:.6f}, {longitude:.6f}"
+    return None
+
+
 ACCOUNT_SENSORS: tuple[ScorpionTrackAccountSensorDescription, ...] = (
     ScorpionTrackAccountSensorDescription(
         key="unread_alerts",
@@ -120,6 +145,32 @@ ACCOUNT_SENSORS: tuple[ScorpionTrackAccountSensorDescription, ...] = (
         value_fn=lambda account: (
             account.latest_alert.timestamp if account.latest_alert is not None else None
         ),
+    ),
+    # Entities removed in 0.5.0 are available again, disabled by default. Their
+    # keys end in "_v2" so their unique IDs differ from 0.4.0: Home Assistant
+    # would otherwise restore the registry entries 0.5.0 deleted, enabled.
+    ScorpionTrackAccountSensorDescription(
+        key="vehicle_count_v2",
+        translation_key="vehicle_count",
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        entity_registry_enabled_default=False,
+        value_fn=lambda account: len(account.vehicles),
+    ),
+    ScorpionTrackAccountSensorDescription(
+        key="last_refreshed_v2",
+        translation_key="last_refreshed",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        entity_registry_enabled_default=False,
+        value_fn=lambda account: account.fetched_at,
+    ),
+    ScorpionTrackAccountSensorDescription(
+        key="user_id_v2",
+        translation_key="user_id",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        entity_registry_enabled_default=False,
+        value_fn=lambda account: account.user_id,
     ),
 )
 
@@ -266,6 +317,121 @@ ACCOUNT_VEHICLE_SENSORS: tuple[ScorpionTrackAccountVehicleSensorDescription, ...
             vehicle.position.hdop if vehicle.position is not None else None
         ),
     ),
+    # Removed in 0.5.0 and available again, disabled by default (see above).
+    ScorpionTrackAccountVehicleSensorDescription(
+        key="location_v2",
+        translation_key="location",
+        entity_registry_enabled_default=False,
+        value_fn=lambda vehicle: (
+            _location(
+                vehicle.position.address,
+                vehicle.position.latitude,
+                vehicle.position.longitude,
+            )
+            if vehicle.position is not None
+            else None
+        ),
+    ),
+    ScorpionTrackAccountVehicleSensorDescription(
+        key="portal_state_v2",
+        translation_key="portal_state",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        entity_registry_enabled_default=False,
+        value_fn=lambda vehicle: _text(vehicle.raw_state),
+    ),
+    ScorpionTrackAccountVehicleSensorDescription(
+        key="installed_v2",
+        translation_key="installed",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        entity_registry_enabled_default=False,
+        value_fn=lambda vehicle: vehicle.installed_at,
+    ),
+    ScorpionTrackAccountVehicleSensorDescription(
+        key="registration_v2",
+        translation_key="registration",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        entity_registry_enabled_default=False,
+        value_fn=lambda vehicle: _text(vehicle.registration),
+    ),
+    ScorpionTrackAccountVehicleSensorDescription(
+        key="description_v2",
+        translation_key="description",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        entity_registry_enabled_default=False,
+        value_fn=lambda vehicle: _text(vehicle.description),
+    ),
+    ScorpionTrackAccountVehicleSensorDescription(
+        key="alias_v2",
+        translation_key="alias",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        entity_registry_enabled_default=False,
+        value_fn=lambda vehicle: _text(vehicle.alias),
+    ),
+    ScorpionTrackAccountVehicleSensorDescription(
+        key="colour_v2",
+        translation_key="colour",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        entity_registry_enabled_default=False,
+        value_fn=lambda vehicle: _text(vehicle.colour),
+    ),
+    ScorpionTrackAccountVehicleSensorDescription(
+        key="fuel_type_v2",
+        translation_key="fuel_type",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        entity_registry_enabled_default=False,
+        value_fn=lambda vehicle: _text(vehicle.fuel_type),
+    ),
+    ScorpionTrackAccountVehicleSensorDescription(
+        key="battery_type_v2",
+        translation_key="battery_type",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        entity_registry_enabled_default=False,
+        value_fn=lambda vehicle: _text(vehicle.battery_type),
+    ),
+    ScorpionTrackAccountVehicleSensorDescription(
+        key="make_v2",
+        translation_key="make",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        entity_registry_enabled_default=False,
+        value_fn=lambda vehicle: _text(vehicle.make),
+    ),
+    ScorpionTrackAccountVehicleSensorDescription(
+        key="model_v2",
+        translation_key="model",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        entity_registry_enabled_default=False,
+        value_fn=lambda vehicle: _text(vehicle.model),
+    ),
+    ScorpionTrackAccountVehicleSensorDescription(
+        key="vehicle_type_v2",
+        translation_key="vehicle_type",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        entity_registry_enabled_default=False,
+        value_fn=lambda vehicle: _text(vehicle.vehicle_type),
+    ),
+    ScorpionTrackAccountVehicleSensorDescription(
+        key="unit_model_v2",
+        translation_key="unit_model",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        entity_registry_enabled_default=False,
+        value_fn=lambda vehicle: _text(vehicle.unit_model),
+    ),
+    ScorpionTrackAccountVehicleSensorDescription(
+        key="unit_make_v2",
+        translation_key="unit_make",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        entity_registry_enabled_default=False,
+        value_fn=lambda vehicle: _text(vehicle.unit_make),
+    ),
+    ScorpionTrackAccountVehicleSensorDescription(
+        key="pending_command_count_v2",
+        translation_key="pending_command_count",
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        entity_registry_enabled_default=False,
+        value_fn=lambda vehicle: vehicle.pending_commands_count,
+    ),
 )
 
 SHARE_SENSORS: tuple[ScorpionTrackShareSensorDescription, ...] = (
@@ -274,6 +440,41 @@ SHARE_SENSORS: tuple[ScorpionTrackShareSensorDescription, ...] = (
         translation_key="share_expires",
         device_class=SensorDeviceClass.TIMESTAMP,
         entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda share: share.expires_at,
+    ),
+    # Removed in 0.5.0 and available again, disabled by default (see above).
+    ScorpionTrackShareSensorDescription(
+        key="share_title_v2",
+        translation_key="share_title",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        entity_registry_enabled_default=False,
+        value_fn=lambda share: _text(share.title),
+    ),
+    ScorpionTrackShareSensorDescription(
+        key="shared_by_v2",
+        translation_key="shared_by",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        entity_registry_enabled_default=False,
+        value_fn=lambda share: _text(share.owner_name),
+    ),
+    ScorpionTrackShareSensorDescription(
+        key="share_created_v2",
+        translation_key="share_created",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        entity_registry_enabled_default=False,
+        value_fn=lambda share: _utc(share.created_at),
+    ),
+)
+
+# Share details repeated on each vehicle device, as in 0.4.0.
+SHARE_VEHICLE_SHARE_SENSORS: tuple[ScorpionTrackShareSensorDescription, ...] = (
+    ScorpionTrackShareSensorDescription(
+        key="share_expires_v2",
+        translation_key="share_expires",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        entity_registry_enabled_default=False,
         value_fn=lambda share: share.expires_at,
     ),
 )
@@ -313,6 +514,17 @@ SHARE_VEHICLE_SENSORS: tuple[ScorpionTrackShareVehicleSensorDescription, ...] = 
         entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda vehicle: vehicle.position.timestamp,
     ),
+    # Removed in 0.5.0 and available again, disabled by default (see above).
+    ScorpionTrackShareVehicleSensorDescription(
+        key="location_v2",
+        translation_key="location",
+        entity_registry_enabled_default=False,
+        value_fn=lambda vehicle: _location(
+            vehicle.position.address,
+            vehicle.position.latitude,
+            vehicle.position.longitude,
+        ),
+    ),
 )
 
 
@@ -351,9 +563,19 @@ async def async_setup_entry(
         entry,
         share_coordinator,
         async_add_entities,
-        lambda vehicle_id: (
-            ScorpionTrackShareVehicleSensor(share_coordinator, vehicle_id, description)
-            for description in SHARE_VEHICLE_SENSORS
+        lambda vehicle_id: chain(
+            (
+                ScorpionTrackShareVehicleSensor(
+                    share_coordinator, vehicle_id, description
+                )
+                for description in SHARE_VEHICLE_SENSORS
+            ),
+            (
+                ScorpionTrackShareVehicleShareSensor(
+                    share_coordinator, vehicle_id, description
+                )
+                for description in SHARE_VEHICLE_SHARE_SENSORS
+            ),
         ),
     )
 
@@ -452,3 +674,27 @@ class ScorpionTrackShareVehicleSensor(ScorpionTrackShareVehicleEntity, SensorEnt
     def native_value(self) -> SensorValue:
         """Return the native sensor value."""
         return self.entity_description.value_fn(self.vehicle)
+
+
+class ScorpionTrackShareVehicleShareSensor(
+    ScorpionTrackShareVehicleEntity, SensorEntity
+):
+    """Represent a share detail on a shared-location vehicle device."""
+
+    entity_description: ScorpionTrackShareSensorDescription
+
+    def __init__(
+        self,
+        coordinator: ScorpionTrackShareCoordinator,
+        vehicle_id: int,
+        description: ScorpionTrackShareSensorDescription,
+    ) -> None:
+        """Initialize the vehicle sensor."""
+        super().__init__(coordinator, vehicle_id, description.key)
+        self.entity_description = description
+
+    @property
+    @override
+    def native_value(self) -> SensorValue:
+        """Return the native sensor value."""
+        return self.entity_description.value_fn(self.share)

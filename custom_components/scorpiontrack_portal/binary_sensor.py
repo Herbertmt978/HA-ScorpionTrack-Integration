@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import datetime
 from typing import override
 
 from homeassistant.components.binary_sensor import (
@@ -14,9 +15,11 @@ from homeassistant.components.binary_sensor import (
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from homeassistant.util import dt as dt_util
 from pyscorpiontrack import ScorpionTrackVehicle
 
 from .account_api import ScorpionTrackVehicleSummary
+from .const import STALE_POSITION_AFTER
 from .coordinator import (
     ScorpionTrackAccountCoordinator,
     ScorpionTrackConfigEntry,
@@ -43,6 +46,11 @@ class ScorpionTrackShareBinarySensorDescription(BinarySensorEntityDescription):
     """Describe a shared-location vehicle binary sensor."""
 
     value_fn: Callable[[ScorpionTrackVehicle], bool | None]
+
+
+def _position_is_stale(timestamp: datetime | None) -> bool:
+    """Return True when there is no position time or it is at least 24 hours old."""
+    return timestamp is None or dt_util.utcnow() - timestamp >= STALE_POSITION_AFTER
 
 
 ACCOUNT_BINARY_SENSORS: tuple[ScorpionTrackAccountBinarySensorDescription, ...] = (
@@ -101,6 +109,40 @@ ACCOUNT_BINARY_SENSORS: tuple[ScorpionTrackAccountBinarySensorDescription, ...] 
         entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda vehicle: vehicle.pending_commands_count > 0,
     ),
+    # Entities removed in 0.5.0 are available again, disabled by default. Their
+    # keys end in "_v2" so their unique IDs differ from 0.4.0: Home Assistant
+    # would otherwise restore the registry entries 0.5.0 deleted, enabled.
+    ScorpionTrackAccountBinarySensorDescription(
+        key="location_stale_v2",
+        translation_key="location_stale",
+        device_class=BinarySensorDeviceClass.PROBLEM,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        entity_registry_enabled_default=False,
+        value_fn=lambda vehicle: _position_is_stale(
+            vehicle.position.timestamp if vehicle.position is not None else None
+        ),
+    ),
+    ScorpionTrackAccountBinarySensorDescription(
+        key="driver_module_v2",
+        translation_key="driver_module",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        entity_registry_enabled_default=False,
+        value_fn=lambda vehicle: vehicle.driver_module,
+    ),
+    ScorpionTrackAccountBinarySensorDescription(
+        key="install_complete_v2",
+        translation_key="install_complete",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        entity_registry_enabled_default=False,
+        value_fn=lambda vehicle: vehicle.install_complete,
+    ),
+    ScorpionTrackAccountBinarySensorDescription(
+        key="immobiliser_fitted_v2",
+        translation_key="immobiliser_fitted",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        entity_registry_enabled_default=False,
+        value_fn=lambda vehicle: vehicle.immobiliser_fitted,
+    ),
 )
 
 SHARE_BINARY_SENSORS: tuple[ScorpionTrackShareBinarySensorDescription, ...] = (
@@ -108,6 +150,15 @@ SHARE_BINARY_SENSORS: tuple[ScorpionTrackShareBinarySensorDescription, ...] = (
         key="ignition",
         translation_key="ignition",
         value_fn=lambda vehicle: vehicle.position.ignition,
+    ),
+    # Removed in 0.5.0 and available again, disabled by default (see above).
+    ScorpionTrackShareBinarySensorDescription(
+        key="location_stale_v2",
+        translation_key="location_stale",
+        device_class=BinarySensorDeviceClass.PROBLEM,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        entity_registry_enabled_default=False,
+        value_fn=lambda vehicle: _position_is_stale(vehicle.position.timestamp),
     ),
 )
 

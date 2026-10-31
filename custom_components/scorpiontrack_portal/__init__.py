@@ -34,7 +34,8 @@ from .coordinator import (
 
 _LOGGER = logging.getLogger(__name__)
 
-# Unique ID patterns for entities removed in config entry version 1.3.
+# Unique ID patterns for the 0.4.0 entities removed in config entry version 1.3.
+# From 0.6.0 they are provided again under new unique IDs, disabled by default.
 _REMOVED_ENTITY_PATTERNS: dict[str, re.Pattern[str]] = {
     Platform.SENSOR: re.compile(
         r"_(?:vehicle_count|last_refreshed|user_id|portal_state|location|installed"
@@ -118,7 +119,7 @@ async def async_migrate_entry(
 
     if entry.version == 1 and entry.minor_version < 3:
         # 1.3 replaces the speed-unit option with Home Assistant's unit settings
-        # and removes entities that are no longer provided.
+        # and removes the registry entries of the 0.4.0 entities listed above.
         entity_registry = er.async_get(hass)
         for registry_entry in er.async_entries_for_config_entry(
             entity_registry, entry.entry_id

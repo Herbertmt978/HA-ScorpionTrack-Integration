@@ -46,6 +46,7 @@ from custom_components.scorpiontrack_portal.sensor import (
     ACCOUNT_VEHICLE_SENSORS,
     SHARE_SENSORS,
     SHARE_VEHICLE_SENSORS,
+    SHARE_VEHICLE_SHARE_SENSORS,
 )
 from custom_components.scorpiontrack_portal.switch import SWITCHES
 
@@ -111,6 +112,7 @@ async def test_share_unique_ids_and_tracker_state(
     expected_unique_ids = {
         "101_2001_tracker",
         *(f"101_2001_{description.key}" for description in SHARE_VEHICLE_SENSORS),
+        *(f"101_2001_{description.key}" for description in SHARE_VEHICLE_SHARE_SENSORS),
         *(f"101_2001_{description.key}" for description in SHARE_BINARY_SENSORS),
         *(f"101_share_{description.key}" for description in SHARE_SENSORS),
     }
@@ -732,6 +734,16 @@ def _deterministic_account(
         armed_mode_enabled=False,
         g_sense_enabled=True,
         pending_commands_count=1,
+        description="Weekend car",
+        colour="Lapiz Blue",
+        fuel_type="Petrol",
+        battery_type="12V lead-acid",
+        unit_make="ScorpionTrack",
+        unit_model="S5",
+        installed_at=datetime(2024, 5, 20, 9, 30, tzinfo=UTC),
+        install_complete=True,
+        immobiliser_fitted=False,
+        driver_module=True,
     )
     alert = ScorpionTrackAlertSummary(
         id=1,
@@ -780,12 +792,15 @@ async def test_entity_snapshots(
     snapshot: SnapshotAssertion,
     request: pytest.FixtureRequest,
     client_mocks: SimpleNamespace,
+    freezer: Any,
     mock_share: ScorpionTrackShare,
     mock_account: ScorpionTrackAccountData,
     entry_fixture: str,
     platform: Platform,
 ) -> None:
     """Every entity's registry entry and state match the reviewed snapshot."""
+    # Location stale depends on the clock.
+    freezer.move_to(FIXED_NOW)
     client_mocks.share.async_get_share.return_value = _deterministic_share(mock_share)
     client_mocks.account.async_refresh_account.return_value = _deterministic_account(
         mock_account
@@ -795,3 +810,225 @@ async def test_entity_snapshots(
         await setup_integration(hass, entry)
 
     await snapshot_platform(hass, entity_registry, snapshot, entry.entry_id)
+
+
+@pytest.mark.parametrize(
+    ("entry_fixture", "expected"),
+    [
+        (
+            "account_config_entry",
+            {
+                "sensor.scorpiontrack_owner_vehicle_count",
+                "sensor.scorpiontrack_owner_last_refreshed",
+                "sensor.scorpiontrack_owner_user_id",
+                "sensor.golf_r_location",
+                "sensor.golf_r_portal_state",
+                "sensor.golf_r_installed",
+                "sensor.golf_r_registration",
+                "sensor.golf_r_description",
+                "sensor.golf_r_alias",
+                "sensor.golf_r_colour",
+                "sensor.golf_r_fuel_type",
+                "sensor.golf_r_battery_type",
+                "sensor.golf_r_make",
+                "sensor.golf_r_model",
+                "sensor.golf_r_vehicle_type",
+                "sensor.golf_r_unit_model",
+                "sensor.golf_r_unit_make",
+                "sensor.golf_r_pending_command_count",
+                "binary_sensor.golf_r_location_stale",
+                "binary_sensor.golf_r_driver_module_fitted",
+                "binary_sensor.golf_r_installation_complete",
+                "binary_sensor.golf_r_immobiliser_fitted",
+            },
+        ),
+        (
+            "share_config_entry",
+            {
+                "sensor.family_cars_share_title",
+                "sensor.family_cars_shared_by",
+                "sensor.family_cars_share_created",
+                "sensor.ab12_cde_location",
+                "sensor.ab12_cde_share_expires",
+                "binary_sensor.ab12_cde_location_stale",
+            },
+        ),
+    ],
+)
+async def test_restored_entities_are_disabled_by_default(
+    hass: HomeAssistant,
+    entity_registry: er.EntityRegistry,
+    request: pytest.FixtureRequest,
+    entry_fixture: str,
+    expected: set[str],
+) -> None:
+    """Entities removed in 0.5.0 return disabled, with their 0.4.0 entity IDs."""
+    entry: MockConfigEntry = request.getfixturevalue(entry_fixture)
+    await setup_integration(hass, entry)
+
+    restored = [
+        registry_entry
+        for registry_entry in er.async_entries_for_config_entry(
+            entity_registry, entry.entry_id
+        )
+        if registry_entry.unique_id.endswith("_v2")
+    ]
+    assert {registry_entry.entity_id for registry_entry in restored} == expected
+    for registry_entry in restored:
+        assert registry_entry.disabled_by is er.RegistryEntryDisabler.INTEGRATION
+        assert hass.states.get(registry_entry.entity_id) is None
+
+
+async def test_restored_entities_stay_disabled_after_0_5_removed_them(
+    hass: HomeAssistant,
+    entity_registry: er.EntityRegistry,
+    account_config_entry: MockConfigEntry,
+) -> None:
+    """Registry entries deleted by 0.5.0 do not bring their entities back enabled."""
+    account_config_entry.add_to_hass(hass)
+    removed = {
+        ("sensor", "42_vehicle_count"): "scorpiontrack_owner_vehicle_count",
+        ("sensor", "42_2001_registration"): "golf_r_registration",
+        ("binary_sensor", "42_2001_location_stale"): "golf_r_location_stale",
+    }
+    for (domain, unique_id), object_id in removed.items():
+        registry_entry = entity_registry.async_get_or_create(
+            domain,
+            DOMAIN,
+            unique_id,
+            config_entry=account_config_entry,
+            suggested_object_id=object_id,
+        )
+        entity_registry.async_remove(registry_entry.entity_id)
+
+    await setup_integration(hass, account_config_entry)
+
+    for (domain, unique_id), object_id in removed.items():
+        assert entity_registry.async_get_entity_id(domain, DOMAIN, unique_id) is None
+        registry_entry = entity_registry.async_get(f"{domain}.{object_id}")
+        assert registry_entry is not None
+        assert registry_entry.unique_id == f"{unique_id}_v2"
+        assert registry_entry.disabled_by is er.RegistryEntryDisabler.INTEGRATION
+
+
+@pytest.mark.usefixtures("entity_registry_enabled_by_default")
+async def test_share_location_stale_follows_the_clock(
+    hass: HomeAssistant,
+    entity_registry: er.EntityRegistry,
+    freezer: Any,
+    share_config_entry: MockConfigEntry,
+    client_mocks: SimpleNamespace,
+    mock_share: ScorpionTrackShare,
+) -> None:
+    """Location stale turns on as the position ages, without new share data."""
+    freezer.move_to(FIXED_NOW)
+    client_mocks.share.async_get_share.return_value = _with_share_position(
+        mock_share, timestamp=FIXED_NOW - timedelta(hours=24) + timedelta(minutes=1)
+    )
+    await setup_integration(hass, share_config_entry)
+    unique_id = "101_2001_location_stale_v2"
+    assert _state(hass, entity_registry, "binary_sensor", unique_id).state == "off"
+
+    await _async_advance_poll(hass, freezer, SHARE_SCAN_INTERVAL)
+
+    assert _state(hass, entity_registry, "binary_sensor", unique_id).state == "on"
+
+
+@pytest.mark.usefixtures("entity_registry_enabled_by_default")
+async def test_account_location_stale_follows_the_clock(
+    hass: HomeAssistant,
+    entity_registry: er.EntityRegistry,
+    freezer: Any,
+    account_config_entry: MockConfigEntry,
+    client_mocks: SimpleNamespace,
+    mock_account: ScorpionTrackAccountData,
+) -> None:
+    """Portal-account Location stale also turns on as the position ages."""
+    freezer.move_to(FIXED_NOW)
+    vehicle = mock_account.vehicles[0]
+    assert vehicle.position is not None
+    position = replace(
+        vehicle.position,
+        timestamp=FIXED_NOW - timedelta(hours=24) + timedelta(minutes=1),
+    )
+    client_mocks.account.async_refresh_account.return_value = replace(
+        mock_account, vehicles=(replace(vehicle, position=position),)
+    )
+    await setup_integration(hass, account_config_entry)
+    unique_id = "42_2001_location_stale_v2"
+    assert _state(hass, entity_registry, "binary_sensor", unique_id).state == "off"
+
+    await _async_advance_poll(hass, freezer, ACCOUNT_SCAN_INTERVAL)
+
+    assert _state(hass, entity_registry, "binary_sensor", unique_id).state == "on"
+
+
+@pytest.mark.usefixtures("entity_registry_enabled_by_default")
+async def test_account_location_falls_back_to_coordinates(
+    hass: HomeAssistant,
+    entity_registry: er.EntityRegistry,
+    account_config_entry: MockConfigEntry,
+    client_mocks: SimpleNamespace,
+    mock_account: ScorpionTrackAccountData,
+) -> None:
+    """Location shows coordinates without an address; no position is stale."""
+    vehicle = mock_account.vehicles[0]
+    assert vehicle.position is not None
+    client_mocks.account.async_refresh_account.return_value = replace(
+        mock_account,
+        vehicles=(
+            replace(vehicle, position=replace(vehicle.position, address=None)),
+            replace(
+                vehicle, id=2002, alias="Van", registration="CD34 EFG", position=None
+            ),
+        ),
+    )
+    await setup_integration(hass, account_config_entry)
+
+    location = _state(hass, entity_registry, "sensor", "42_2001_location_v2")
+    assert location.state == "51.507400, -0.127800"
+    no_position = _state(hass, entity_registry, "sensor", "42_2002_location_v2")
+    assert no_position.state == STATE_UNKNOWN
+    stale = _state(hass, entity_registry, "binary_sensor", "42_2002_location_stale_v2")
+    assert stale.state == "on"
+
+
+@pytest.mark.usefixtures("entity_registry_enabled_by_default")
+async def test_share_text_is_cut_to_the_state_limit(
+    hass: HomeAssistant,
+    entity_registry: er.EntityRegistry,
+    share_config_entry: MockConfigEntry,
+    client_mocks: SimpleNamespace,
+    mock_share: ScorpionTrackShare,
+) -> None:
+    """Long portal text is cut to 255 characters, and empty text is unknown."""
+    share = _with_share_position(mock_share, address="A" * 300)
+    client_mocks.share.async_get_share.return_value = replace(
+        share, title="", owner_name="B" * 300
+    )
+    await setup_integration(hass, share_config_entry)
+
+    location = _state(hass, entity_registry, "sensor", "101_2001_location_v2")
+    assert location.state == "A" * 255
+    shared_by = _state(hass, entity_registry, "sensor", "101_share_shared_by_v2")
+    assert shared_by.state == "B" * 255
+    title = _state(hass, entity_registry, "sensor", "101_share_share_title_v2")
+    assert title.state == STATE_UNKNOWN
+
+
+@pytest.mark.usefixtures("entity_registry_enabled_by_default")
+async def test_share_created_without_time_zone_is_utc(
+    hass: HomeAssistant,
+    entity_registry: er.EntityRegistry,
+    share_config_entry: MockConfigEntry,
+    client_mocks: SimpleNamespace,
+    mock_share: ScorpionTrackShare,
+) -> None:
+    """A share creation time sent without a time zone is read as UTC."""
+    client_mocks.share.async_get_share.return_value = replace(
+        mock_share, created_at=datetime(2026, 10, 28, 12, 0)
+    )
+    await setup_integration(hass, share_config_entry)
+
+    created = _state(hass, entity_registry, "sensor", "101_share_share_created_v2")
+    assert created.state == "2026-10-28T12:00:00+00:00"

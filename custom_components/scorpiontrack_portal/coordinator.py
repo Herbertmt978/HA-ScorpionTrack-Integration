@@ -247,13 +247,15 @@ class ScorpionTrackShareCoordinator(DataUpdateCoordinator[ScorpionTrackShare]):
         """Initialize the coordinator."""
         self.client = client
         self.vehicles_by_id: dict[int, ScorpionTrackVehicle] = {}
+        # Listeners must run on every refresh: Location stale is evaluated
+        # against the clock, so it can change while the share payload stays
+        # the same.
         super().__init__(
             hass,
             _LOGGER,
             config_entry=entry,
             name=f"{DOMAIN}_{entry.entry_id}",
             update_interval=SHARE_SCAN_INTERVAL,
-            always_update=False,
         )
 
     @override
