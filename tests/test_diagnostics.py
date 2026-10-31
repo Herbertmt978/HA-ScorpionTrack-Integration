@@ -8,6 +8,7 @@ from types import SimpleNamespace
 from typing import Any
 
 import pytest
+from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant
 from pyscorpiontrack import ScorpionTrackConnectionError
 from pytest_homeassistant_custom_component.common import MockConfigEntry
@@ -118,6 +119,61 @@ async def test_hybrid_diagnostics_report_share_health_without_token(
         "matched_vehicle_count": 1,
     }
     assert "canonical-token" not in serialized
+
+
+async def test_diagnostics_before_setup_report_only_the_entry(
+    hass: HomeAssistant,
+    share_config_entry: MockConfigEntry,
+) -> None:
+    """An entry that has not been set up has no coordinator to report."""
+    share_config_entry.add_to_hass(hass)
+
+    diagnostics = await async_get_config_entry_diagnostics(hass, share_config_entry)
+
+    assert diagnostics == {
+        "config_entry": {
+            "setup_type": "share",
+            "state": "not_loaded",
+            "version": 1,
+            "minor_version": 3,
+        },
+        "entities": {"total": 0, "disabled": 0, "by_platform": {}},
+    }
+
+
+async def test_diagnostics_while_setup_retries_report_only_the_entry(
+    hass: HomeAssistant,
+    share_config_entry: MockConfigEntry,
+    client_mocks: SimpleNamespace,
+) -> None:
+    """A failed first refresh leaves no coordinator, and no exception details."""
+    client_mocks.share.async_get_share.side_effect = ScorpionTrackConnectionError(
+        "https://example.invalid/location-shares/secret-share-token/view"
+    )
+    await setup_integration(hass, share_config_entry)
+    assert share_config_entry.state is ConfigEntryState.SETUP_RETRY
+
+    diagnostics = await async_get_config_entry_diagnostics(hass, share_config_entry)
+    serialized = json.dumps(diagnostics)
+
+    assert diagnostics["config_entry"]["state"] == "setup_retry"
+    assert set(diagnostics) == {"config_entry", "entities"}
+    assert "secret-share-token" not in serialized
+
+
+async def test_diagnostics_after_unload_keep_entity_counts(
+    hass: HomeAssistant,
+    account_config_entry: MockConfigEntry,
+) -> None:
+    """An unloaded or disabled entry still reports its registered entities."""
+    await setup_integration(hass, account_config_entry)
+    assert await hass.config_entries.async_unload(account_config_entry.entry_id)
+
+    diagnostics = await async_get_config_entry_diagnostics(hass, account_config_entry)
+
+    assert diagnostics["config_entry"]["state"] == "not_loaded"
+    assert diagnostics["entities"]["total"] == 53
+    assert set(diagnostics) == {"config_entry", "entities"}
 
 
 async def test_diagnostics_expose_exception_type_without_message(
