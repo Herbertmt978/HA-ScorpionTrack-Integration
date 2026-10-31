@@ -57,13 +57,7 @@ class ScorpionTrackAccountEntity(CoordinatorEntity[ScorpionTrackAccountCoordinat
         """Initialize an account-level entity."""
         super().__init__(coordinator)
         self._attr_unique_id = f"{coordinator.account_identifier}_{key}"
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, f"account_{coordinator.account_identifier}")},
-            entry_type=DeviceEntryType.SERVICE,
-            manufacturer=MANUFACTURER,
-            model="Portal Account",
-            name=coordinator.data.title,
-        )
+        self._attr_device_info = coordinator.account_device_info
 
     @property
     def account(self) -> ScorpionTrackAccountData:
@@ -90,7 +84,7 @@ class ScorpionTrackAccountVehicleEntity(
         self._attr_unique_id = f"{account_identifier}_{vehicle_id}_{key}"
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, f"{account_identifier}_vehicle_{vehicle_id}")},
-            via_device=(DOMAIN, f"account_{account_identifier}"),
+            via_device_id=coordinator.account_device_id,
             manufacturer=vehicle.make or MANUFACTURER,
             model=vehicle.model
             or vehicle.unit_model

@@ -10,10 +10,11 @@ from typing import override
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_EMAIL
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryError
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import issue_registry as ir
+from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
 from pyscorpiontrack import (
@@ -38,7 +39,7 @@ from .account_api import (
     ScorpionTrackVehiclePosition,
     ScorpionTrackVehicleSummary,
 )
-from .const import ACCOUNT_SCAN_INTERVAL, DOMAIN, SHARE_SCAN_INTERVAL
+from .const import ACCOUNT_SCAN_INTERVAL, DOMAIN, MANUFACTURER, SHARE_SCAN_INTERVAL
 from .utils import stable_hash
 
 _LOGGER = logging.getLogger(__name__)
@@ -53,6 +54,7 @@ class ScorpionTrackAccountCoordinator(DataUpdateCoordinator[ScorpionTrackAccount
     """Coordinate authenticated ScorpionTrack account updates."""
 
     config_entry: ScorpionTrackConfigEntry
+    account_device_id: str
 
     def __init__(
         self,
@@ -93,6 +95,28 @@ class ScorpionTrackAccountCoordinator(DataUpdateCoordinator[ScorpionTrackAccount
                 if share_client is not None
                 else ACCOUNT_SCAN_INTERVAL
             ),
+        )
+
+    @property
+    def account_device_info(self) -> DeviceInfo:
+        """Return the device that represents the portal account."""
+        return DeviceInfo(
+            identifiers={(DOMAIN, f"account_{self.account_identifier}")},
+            entry_type=DeviceEntryType.SERVICE,
+            manufacturer=MANUFACTURER,
+            model="Portal Account",
+            name=self.data.title,
+        )
+
+    @callback
+    def async_register_account_device(self) -> None:
+        """Create the account device so vehicle devices can link to it."""
+        self.account_device_id = (
+            dr.async_get(self.hass)
+            .async_get_or_create(
+                config_entry_id=self.config_entry.entry_id, **self.account_device_info
+            )
+            .id
         )
 
     async def async_request_account_refresh(self) -> None:

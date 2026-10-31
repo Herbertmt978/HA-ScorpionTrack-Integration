@@ -44,6 +44,8 @@ This release brings the integration in line with Home Assistant Core's Platinum 
 - A vehicle that returned to an account or share after being removed never had its entities recreated.
 - Switch and button actions now run one at a time per platform; the concurrency setting was previously ignored.
 - Hybrid entries reported status in title case, unlike portal-only entries.
+- Link vehicle devices to the account device by registry ID. The previous identifier-based link is deprecated and stops working in Home Assistant 2027.8.
+- Portal-account scheduled modes (transport, garage and no-alert) now switch at their window boundaries even when the portal data is unchanged.
 
 ### Changed
 

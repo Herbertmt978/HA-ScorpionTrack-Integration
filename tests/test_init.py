@@ -332,6 +332,25 @@ async def test_vehicle_device_identity_is_preserved(
     assert device.model == model
 
 
+async def test_account_vehicle_devices_link_to_the_account_device(
+    hass: HomeAssistant,
+    device_registry: dr.DeviceRegistry,
+    account_config_entry: MockConfigEntry,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Vehicle devices link to the account device by registry ID."""
+    await setup_integration(hass, account_config_entry)
+
+    account = device_registry.async_get_device(identifiers={(DOMAIN, "account_42")})
+    vehicle = device_registry.async_get_device(
+        identifiers={(DOMAIN, "42_vehicle_2001")}
+    )
+    assert account is not None
+    assert vehicle is not None
+    assert vehicle.via_device_id == account.id
+    assert "via_device" not in caplog.text
+
+
 async def test_fallback_account_identity_survives_later_user_id(
     hass: HomeAssistant,
     entity_registry: er.EntityRegistry,

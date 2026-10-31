@@ -86,6 +86,8 @@ async def async_setup_entry(
         )
 
     await coordinator.async_config_entry_first_refresh()
+    if isinstance(coordinator, ScorpionTrackAccountCoordinator):
+        coordinator.async_register_account_device()
 
     entry.runtime_data = coordinator
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
