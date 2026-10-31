@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections import Counter
 from typing import Any
 
+from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 
@@ -17,33 +18,18 @@ async def async_get_config_entry_diagnostics(
     entry: ScorpionTrackConfigEntry,
 ) -> dict[str, Any]:
     """Return an allowlisted diagnostics payload for a config entry."""
-    coordinator = entry.runtime_data
     registry_entries = er.async_entries_for_config_entry(
         er.async_get(hass), entry.entry_id
     )
     entities_by_platform = Counter(
         registry_entry.domain for registry_entry in registry_entries
     )
-    update_interval = coordinator.update_interval
-
     diagnostics: dict[str, Any] = {
         "config_entry": {
             "setup_type": entry.data[CONF_SETUP_TYPE],
             "state": entry.state.value,
             "version": entry.version,
             "minor_version": entry.minor_version,
-        },
-        "coordinator": {
-            "last_update_success": coordinator.last_update_success,
-            "last_exception_type": (
-                type(coordinator.last_exception).__name__
-                if coordinator.last_exception is not None
-                else None
-            ),
-            "update_interval_seconds": (
-                update_interval.total_seconds() if update_interval is not None else None
-            ),
-            "vehicle_count": len(coordinator.vehicles_by_id),
         },
         "entities": {
             "total": len(registry_entries),
@@ -53,6 +39,25 @@ async def async_get_config_entry_diagnostics(
             ),
             "by_platform": dict(sorted(entities_by_platform.items())),
         },
+    }
+    # The entry has no coordinator until setup finishes, while setup is being
+    # retried, or once it is unloaded or disabled.
+    if entry.state is not ConfigEntryState.LOADED:
+        return diagnostics
+
+    coordinator = entry.runtime_data
+    update_interval = coordinator.update_interval
+    diagnostics["coordinator"] = {
+        "last_update_success": coordinator.last_update_success,
+        "last_exception_type": (
+            type(coordinator.last_exception).__name__
+            if coordinator.last_exception is not None
+            else None
+        ),
+        "update_interval_seconds": (
+            update_interval.total_seconds() if update_interval is not None else None
+        ),
+        "vehicle_count": len(coordinator.vehicles_by_id),
     }
 
     if isinstance(coordinator, ScorpionTrackAccountCoordinator):

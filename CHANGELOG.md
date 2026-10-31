@@ -6,6 +6,12 @@ All notable changes to this project are documented here.
 
 No changes yet.
 
+## 0.6.1 - 2026-10-31
+
+### Fixed
+
+- Downloading diagnostics for an entry that is still setting up, retrying setup, unloaded or disabled no longer fails with an error. Diagnostics then report the entry's setup type, state and entity counts, without coordinator details.
+
 ## 0.6.0 - 2026-10-31
 
 ### Added
