@@ -4,7 +4,9 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
-No changes yet.
+### Fixed
+
+- A parked vehicle whose shared-location speed is only GPS drift (below 3 km/h) is no longer reported as moving. Hybrid and shared-location entries now apply the same 3 km/h threshold the portal uses, reporting `parked`, or `idle` with the ignition on.
 
 ## 0.5.0 - 2026-10-31
 

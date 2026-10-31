@@ -23,6 +23,7 @@ from .const import (
     FMS_VEHICLES_PATH,
     LOGIN_PATH,
     LOGIN_POST_PATH,
+    MOVING_SPEED_THRESHOLD_KMH,
     PORTAL_BASE_URL,
     VEHICLE_LIST_PAGE_PATH,
 )
@@ -1534,12 +1535,12 @@ def _derive_vehicle_status(
         return "alert"
 
     if ignition:
-        if speed_kmh is None or speed_kmh < 3:
+        if speed_kmh is None or speed_kmh < MOVING_SPEED_THRESHOLD_KMH:
             return "idle" if engine else "ignition"
         return "moving"
 
     if speed_kmh is not None:
-        return "parked" if speed_kmh < 3 else "moving"
+        return "parked" if speed_kmh < MOVING_SPEED_THRESHOLD_KMH else "moving"
 
     return _clean_text(raw_state.lower() if raw_state else None)
 

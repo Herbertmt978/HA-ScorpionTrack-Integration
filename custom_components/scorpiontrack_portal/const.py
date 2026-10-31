@@ -31,6 +31,10 @@ FMS_ALERTS_BULK_READ_PATH = "/alerts-dashboard/bulk-read"
 ACCOUNT_SCAN_INTERVAL = timedelta(minutes=5)
 SHARE_SCAN_INTERVAL = timedelta(minutes=2)
 
+# The portal reports a vehicle as moving only from this speed, which keeps GPS
+# drift on a parked vehicle from reading as movement.
+MOVING_SPEED_THRESHOLD_KMH = 3.0
+
 PLATFORMS: tuple[Platform, ...] = (
     Platform.SENSOR,
     Platform.BINARY_SENSOR,
