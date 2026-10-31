@@ -4,6 +4,10 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+No changes yet.
+
+## 0.4.0 - 2026-10-31
+
 ### Changed
 
 - **Breaking:** Rename the integration to ScorpionTrack Portal and move it to its own `scorpiontrack_portal` domain (`custom_components/scorpiontrack_portal`). It no longer replaces Home Assistant's built-in ScorpionTrack integration, and both can now be installed and configured at the same time.

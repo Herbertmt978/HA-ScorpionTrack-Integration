@@ -60,7 +60,8 @@ suite with Home Assistant 2026.8.0 from the lockfile on Python 3.14.
 - Explain user-visible behaviour and compatibility implications.
 - State whether portal-account mode, shared-link mode, or both were tested.
 - Update the README and changelog when behaviour changes.
-- Let every required check finish before merge.
+- Let every required check finish before merge. The maintainer may ask a coding
+  agent to read the reviews and merge; see [RELEASING.md](RELEASING.md#merge-a-pull-request).
 - Dependabot may queue individual stable patch/minor updates to the allowlisted
   GitHub Actions or Ruff for auto-merge after every required check passes.
   The policy accepts only the expected dependency files, excludes groups and
