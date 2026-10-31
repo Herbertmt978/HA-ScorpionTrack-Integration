@@ -22,9 +22,10 @@ Before an agent merges a pull request on the maintainer's behalf, it must:
    checks, and wait for the required checks to pass again.
 4. Confirm that no review threads are unresolved, no changes are requested, and
    the pull request can merge without bypassing the `main` ruleset.
-5. Squash-merge against the reviewed head commit, for example
-   `gh pr merge --squash --match-head-commit <sha>`, with a commit message that
-   summarises the change and its verification.
+5. Squash-merge the pull request by number against the reviewed head commit,
+   for example `gh pr merge <number> --squash --match-head-commit <sha>`, with a
+   commit message that summarises the change and its verification. Without a
+   number, `gh` merges the pull request for the currently checked-out branch.
 
 If the agent cannot complete a step, or considers a finding incorrect or out of
 scope, it leaves the pull request open and explains what is outstanding to the
