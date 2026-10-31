@@ -25,7 +25,7 @@ an installed Home Assistant environment.
 
 1. Choose the next semantic version, for example `0.2.1`.
 2. Update the version in:
-   - `custom_components/scorpiontrack/manifest.json`
+   - `custom_components/scorpiontrack_portal/manifest.json`
    - `pyproject.toml`
    - the root project record in `uv.lock`
 3. Move the relevant entries from `Unreleased` to a dated changelog section.

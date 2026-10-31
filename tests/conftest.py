@@ -23,12 +23,12 @@ from pytest_homeassistant_custom_component.syrupy import (
 )
 from syrupy.assertion import SnapshotAssertion
 
-from custom_components.scorpiontrack.account_api import (
+from custom_components.scorpiontrack_portal.account_api import (
     ScorpionTrackAccountData,
     ScorpionTrackVehiclePosition,
     ScorpionTrackVehicleSummary,
 )
-from custom_components.scorpiontrack.const import (
+from custom_components.scorpiontrack_portal.const import (
     CONF_SETUP_TYPE,
     CONF_SHARE_TOKEN,
     DOMAIN,
@@ -150,19 +150,19 @@ def mock_clients(
     """Mock both ScorpionTrack clients at their integration boundaries."""
     with (
         patch(
-            "custom_components.scorpiontrack.ScorpionTrackShareClient",
+            "custom_components.scorpiontrack_portal.ScorpionTrackShareClient",
             autospec=True,
         ) as share_client_class,
         patch(
-            "custom_components.scorpiontrack.config_flow.ScorpionTrackShareClient",
+            "custom_components.scorpiontrack_portal.config_flow.ScorpionTrackShareClient",
             new=share_client_class,
         ),
         patch(
-            "custom_components.scorpiontrack.ScorpionTrackAccountClient",
+            "custom_components.scorpiontrack_portal.ScorpionTrackAccountClient",
             autospec=True,
         ) as account_client_class,
         patch(
-            "custom_components.scorpiontrack.config_flow.ScorpionTrackAccountClient",
+            "custom_components.scorpiontrack_portal.config_flow.ScorpionTrackAccountClient",
             new=account_client_class,
         ),
     ):

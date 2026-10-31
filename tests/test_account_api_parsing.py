@@ -16,7 +16,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.scorpiontrack.account_api import (
+from custom_components.scorpiontrack_portal.account_api import (
     ScorpionTrackAccountClient,
     ScorpionTrackAccountData,
     ScorpionTrackAlertSummary,
@@ -25,6 +25,7 @@ from custom_components.scorpiontrack.account_api import (
     ScorpionTrackPortalError,
     ScorpionTrackVehicleSummary,
 )
+from custom_components.scorpiontrack_portal.const import DOMAIN
 
 from . import setup_integration
 
@@ -290,7 +291,7 @@ async def test_login_debug_log_does_not_expose_portal_user_id(
     session = _ScriptedSession(_login_responses(user_id=internal_user_id))
     client = _client(session)
     caplog.set_level(
-        logging.DEBUG, logger="custom_components.scorpiontrack.account_api"
+        logging.DEBUG, logger="custom_components.scorpiontrack_portal.account_api"
     )
 
     await client.async_login()
@@ -310,7 +311,7 @@ async def test_login_failure_log_does_not_expose_portal_user_id(
     session = _ScriptedSession(_login_responses(user_id=internal_user_id, api_key=""))
     client = _client(session)
     caplog.set_level(
-        logging.WARNING, logger="custom_components.scorpiontrack.account_api"
+        logging.WARNING, logger="custom_components.scorpiontrack_portal.account_api"
     )
 
     with pytest.raises(ScorpionTrackPortalError, match="fleet API details"):
@@ -644,7 +645,7 @@ async def test_portal_voltage_reaches_home_assistant(
     await setup_integration(hass, account_config_entry)
 
     entity_id = entity_registry.async_get_entity_id(
-        "sensor", "scorpiontrack", "42_2001_battery_voltage"
+        "sensor", DOMAIN, "42_2001_battery_voltage"
     )
     assert entity_id is not None
     state = hass.states.get(entity_id)

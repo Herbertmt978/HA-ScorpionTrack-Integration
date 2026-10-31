@@ -10,8 +10,8 @@ import pytest
 from homeassistant.core import HomeAssistant
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.scorpiontrack.const import CONF_SHARE_TOKEN, DOMAIN
-from custom_components.scorpiontrack.diagnostics import (
+from custom_components.scorpiontrack_portal.const import CONF_SHARE_TOKEN, DOMAIN
+from custom_components.scorpiontrack_portal.diagnostics import (
     async_get_config_entry_diagnostics,
 )
 

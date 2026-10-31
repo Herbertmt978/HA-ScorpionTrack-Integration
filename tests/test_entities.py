@@ -17,31 +17,31 @@ from pytest_homeassistant_custom_component.common import (
     async_fire_time_changed,
 )
 
-from custom_components.scorpiontrack.account_api import ScorpionTrackAccountData
-from custom_components.scorpiontrack.account_binary_sensor import (
+from custom_components.scorpiontrack_portal.account_api import ScorpionTrackAccountData
+from custom_components.scorpiontrack_portal.account_binary_sensor import (
     VEHICLE_BINARY_SENSOR_DESCRIPTIONS as ACCOUNT_BINARY_SENSORS,
 )
-from custom_components.scorpiontrack.account_sensor import (
+from custom_components.scorpiontrack_portal.account_sensor import (
     ACCOUNT_SENSOR_DESCRIPTIONS,
 )
-from custom_components.scorpiontrack.account_sensor import (
+from custom_components.scorpiontrack_portal.account_sensor import (
     VEHICLE_SENSOR_DESCRIPTIONS as ACCOUNT_VEHICLE_SENSORS,
 )
-from custom_components.scorpiontrack.account_switch import (
+from custom_components.scorpiontrack_portal.account_switch import (
     VEHICLE_SWITCH_DESCRIPTIONS,
 )
-from custom_components.scorpiontrack.const import (
+from custom_components.scorpiontrack_portal.const import (
     ACCOUNT_SCAN_INTERVAL,
     DOMAIN,
     SHARE_SCAN_INTERVAL,
 )
-from custom_components.scorpiontrack.share_binary_sensor import (
+from custom_components.scorpiontrack_portal.share_binary_sensor import (
     BINARY_SENSOR_DESCRIPTIONS as SHARE_BINARY_SENSORS,
 )
-from custom_components.scorpiontrack.share_sensor import (
+from custom_components.scorpiontrack_portal.share_sensor import (
     SENSOR_DESCRIPTIONS as SHARE_VEHICLE_SENSORS,
 )
-from custom_components.scorpiontrack.share_sensor import (
+from custom_components.scorpiontrack_portal.share_sensor import (
     SHARE_SENSOR_DESCRIPTIONS,
 )
 

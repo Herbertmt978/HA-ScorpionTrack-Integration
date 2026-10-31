@@ -74,12 +74,12 @@ jobs:
         run: >
           uv run --locked --only-group test
           pytest tests/test_config_flow.py
-          --cov=custom_components.scorpiontrack.config_flow
+          --cov=custom_components.scorpiontrack_portal.config_flow
           --cov-report=term-missing
           --cov-fail-under=100
       - name: Run complete suite on Home Assistant 2026.8.0
         run: >
           uv run --locked --only-group test
           pytest tests
-          --cov=custom_components.scorpiontrack
+          --cov=custom_components.scorpiontrack_portal
           --cov-report=term-missing

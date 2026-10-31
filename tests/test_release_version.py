@@ -73,7 +73,7 @@ def _write_release_files(
     lock_version: str | None,
 ) -> None:
     """Write the minimal release metadata used by the validator."""
-    component = root / "custom_components" / "scorpiontrack"
+    component = root / "custom_components" / "scorpiontrack_portal"
     component.mkdir(parents=True)
     (component / "manifest.json").write_text(
         f'{{"version": "{manifest_version}"}}', encoding="utf-8"

@@ -39,7 +39,7 @@ timeout = 10
 addopts = "-ra --strict-config --strict-markers"
 
 [tool.coverage.run]
-source = ["custom_components/scorpiontrack"]
+source = ["custom_components/scorpiontrack_portal"]
 
 [tool.coverage.report]
 fail_under = 95
@@ -61,4 +61,4 @@ select = ["B", "C4", "E", "F", "I", "PERF", "PIE", "RUF", "SIM", "UP"]
 ignore = ["E501"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["custom_components.scorpiontrack"]
+known-first-party = ["custom_components.scorpiontrack_portal"]

@@ -8,8 +8,8 @@ from typing import Any
 
 from homeassistant.const import Platform, UnitOfSpeed
 
-DOMAIN = "scorpiontrack"
-DEFAULT_NAME = "ScorpionTrack Integration"
+DOMAIN = "scorpiontrack_portal"
+DEFAULT_NAME = "ScorpionTrack Portal"
 ACCOUNT_DEFAULT_NAME = "ScorpionTrack Account"
 SHARE_DEFAULT_NAME = "ScorpionTrack Share"
 MANUFACTURER = "ScorpionTrack"
