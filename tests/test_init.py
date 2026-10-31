@@ -22,34 +22,38 @@ from pyscorpiontrack import (
 )
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.scorpiontrack.account_api import (
+from custom_components.scorpiontrack_portal.account_api import (
     ScorpionTrackAccountData,
     ScorpionTrackAuthError,
     ScorpionTrackPortalError,
 )
-from custom_components.scorpiontrack.account_api import (
+from custom_components.scorpiontrack_portal.account_api import (
     ScorpionTrackConnectionError as ScorpionTrackAccountConnectionError,
 )
-from custom_components.scorpiontrack.account_coordinator import (
+from custom_components.scorpiontrack_portal.account_coordinator import (
     ScorpionTrackAccountCoordinator,
 )
-from custom_components.scorpiontrack.const import (
+from custom_components.scorpiontrack_portal.const import (
     CONF_SETUP_TYPE,
     CONF_SHARE_TOKEN,
     DOMAIN,
 )
-from custom_components.scorpiontrack.share_coordinator import (
+from custom_components.scorpiontrack_portal.share_coordinator import (
     ScorpionTrackShareCoordinator,
 )
-from custom_components.scorpiontrack.utils import stable_hash
+from custom_components.scorpiontrack_portal.utils import stable_hash
 
 from . import setup_integration
 
 
 async def test_custom_integration_is_loaded(hass: HomeAssistant) -> None:
-    """The custom package must win over the same-domain Core integration."""
+    """The custom package must load beside, not over, the Core integration."""
     integration = await loader.async_get_integration(hass, DOMAIN)
-    assert integration.pkg_path == "custom_components.scorpiontrack"
+    assert integration.domain == DOMAIN
+    assert integration.pkg_path == "custom_components.scorpiontrack_portal"
+
+    built_in = await loader.async_get_integration(hass, "scorpiontrack")
+    assert built_in.pkg_path == "homeassistant.components.scorpiontrack"
 
 
 @pytest.mark.parametrize(
@@ -123,7 +127,7 @@ async def test_options_update_reloads_entry(
         "async_reload",
         AsyncMock(return_value=True),
     ) as reload_entry:
-        from custom_components.scorpiontrack import _async_reload_entry
+        from custom_components.scorpiontrack_portal import _async_reload_entry
 
         await _async_reload_entry(hass, account_config_entry)
 

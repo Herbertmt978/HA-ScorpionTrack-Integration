@@ -10,6 +10,8 @@ from homeassistant.helpers import entity_registry as er
 from pyscorpiontrack import ScorpionTrackShare
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
+from custom_components.scorpiontrack_portal.const import DOMAIN
+
 from . import setup_integration
 from .test_account_api_parsing import (
     _client,
@@ -220,9 +222,7 @@ async def test_account_telemetry_boundaries(
             account_config_entry, options={"speed_unit": "km/h"}
         )
     await setup_integration(hass, account_config_entry)
-    entity_id = entity_registry.async_get_entity_id(
-        domain, "scorpiontrack", f"42_2001_{key}"
-    )
+    entity_id = entity_registry.async_get_entity_id(domain, DOMAIN, f"42_2001_{key}")
     assert entity_id is not None
     state = hass.states.get(entity_id)
     assert state is not None
@@ -258,9 +258,7 @@ async def test_malformed_optional_alert_data_keeps_vehicle_entities(
     account = await _client(session).async_refresh_account()
     client_mocks.account.async_refresh_account.return_value = account
     await setup_integration(hass, account_config_entry)
-    entity_id = entity_registry.async_get_entity_id(
-        "sensor", "scorpiontrack", "42_2001_speed"
-    )
+    entity_id = entity_registry.async_get_entity_id("sensor", DOMAIN, "42_2001_speed")
     assert entity_id is not None
     state = hass.states.get(entity_id)
     assert state is not None
@@ -309,7 +307,7 @@ async def test_odometer_has_consistent_units_across_sources(
     client_mocks.account.async_refresh_account.return_value = account
     await setup_integration(hass, account_config_entry)
     entity_id = entity_registry.async_get_entity_id(
-        "sensor", "scorpiontrack", "42_2001_odometer"
+        "sensor", DOMAIN, "42_2001_odometer"
     )
     assert entity_id is not None
     state = hass.states.get(entity_id)
@@ -344,7 +342,7 @@ async def test_share_ignition_preserves_unknown(
     )
     await setup_integration(hass, share_config_entry)
     entity_id = entity_registry.async_get_entity_id(
-        "binary_sensor", "scorpiontrack", "101_2001_ignition"
+        "binary_sensor", DOMAIN, "101_2001_ignition"
     )
     assert entity_id is not None
     state = hass.states.get(entity_id)

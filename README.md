@@ -1,10 +1,10 @@
 <div align="center">
 
-<img src="brand/header.svg" alt="ScorpionTrack Integration: a tracked car on a night-time map with an amber route" width="880">
+<img src="brand/header.svg" alt="ScorpionTrack Portal: a tracked car on a night-time map with an amber route" width="880">
 
-# ScorpionTrack Integration
+# ScorpionTrack Portal
 
-Track vehicles from a ScorpionTrack portal account or shared-location link in Home Assistant.
+Add ScorpionTrack portal accounts, alerts and controls to Home Assistant, alongside the built-in ScorpionTrack integration.
 
 [![HACS validation](https://github.com/Herbertmt978/HA-ScorpionTrack-Integration/actions/workflows/validate.yml/badge.svg?branch=main)](https://github.com/Herbertmt978/HA-ScorpionTrack-Integration/actions/workflows/validate.yml)
 [![Hassfest](https://github.com/Herbertmt978/HA-ScorpionTrack-Integration/actions/workflows/hassfest.yml/badge.svg?branch=main)](https://github.com/Herbertmt978/HA-ScorpionTrack-Integration/actions/workflows/hassfest.yml)
@@ -14,33 +14,47 @@ Track vehicles from a ScorpionTrack portal account or shared-location link in Ho
 
 [![Open this repository in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=Herbertmt978&repository=HA-ScorpionTrack-Integration&category=integration)
 
-[Choose a version](#choose-the-right-integration) | [Install](#installation) | [Set up](#setup) | [Update or remove](#update-roll-back-or-remove) | [Privacy](#security-and-privacy) | [Support](#troubleshooting)
+[Choose an integration](#choose-the-right-integration) | [Install](#installation) | [Upgrade from 0.3.x](#upgrade-from-scorpiontrack-integration-03x) | [Set up](#setup) | [Update or remove](#update-roll-back-or-remove) | [Privacy](#security-and-privacy) | [Support](#troubleshooting)
 
 </div>
 
 ## Choose the right integration
 
 Home Assistant includes a built-in ScorpionTrack integration, installed from
-**Settings → Devices & services → Add integration**. It supports shared-location
-links. Choose it when read-only tracking is enough.
+**Settings → Devices & services → Add integration**. It uses ScorpionTrack's
+shared-location API and is the right choice when read-only tracking is enough.
 
-This custom integration adds portal accounts, account alerts and verified
-portal controls alongside shared-location tracking.
+ScorpionTrack Portal is a separate custom integration with its own
+`scorpiontrack_portal` domain, so you can install and run it alongside the
+built-in integration. It adds portal-account login, account alerts, richer
+vehicle entities and verified portal controls, and it also supports
+shared-location links.
 
-| Capability | Built-in Home Assistant integration | This HACS integration |
+Portal-account mode is kept out of Home Assistant Core because it signs in through
+the ScorpionTrack web portal's login route. That route is private web behaviour
+rather than a documented API, so it is less stable than the shared-location API
+used by the built-in integration. Hybrid mode joins the two: the portal provides
+account data, alerts and controls, while an optional share provides faster live
+positions.
+
+| Capability | Built-in ScorpionTrack | ScorpionTrack Portal |
 | --- | --- | --- |
+| Integration domain | `scorpiontrack` | `scorpiontrack_portal` |
 | Installation | Home Assistant's integration screen | HACS custom repository or manual copy |
+| Data source | Shared-location API | Portal login, plus the shared-location API when a share is added |
 | Shared-location links | Yes | Yes |
 | Portal account login | No | Yes |
 | Account alerts and `Mark Alerts Read` | No | Yes |
+| Richer vehicle entities, such as odometer, battery voltage and MOT due | No | Yes |
 | Verified portal controls | No | `Privacy Mode` and `Zero-Speed Mode` |
+
+Both integrations can be configured at the same time. Avoid adding the same
+share to both, or each vehicle will appear twice.
 
 The source and review history for the built-in integration are available in [Herbertmt978/ScorpionTrack-Integration](https://github.com/Herbertmt978/ScorpionTrack-Integration). Install that version from Home Assistant's integration screen, not from its source repository.
 
 > [!IMPORTANT]
-> Both versions use the `scorpiontrack` integration domain and cannot run at the same time. Installing this custom integration makes it take precedence over the built-in version. Make a Home Assistant backup before installing, removing, or switching between them.
-
-Because this repository overrides a built-in domain, HACS cannot list it in the default store. Add it as a custom repository instead.
+> Versions 0.3.x and earlier were called ScorpionTrack Integration and used the built-in `scorpiontrack` domain, replacing the built-in integration while installed. If you are updating from one of those versions, follow [Upgrade from ScorpionTrack Integration 0.3.x](#upgrade-from-scorpiontrack-integration-03x). Make a Home Assistant backup before installing, updating or removing either integration.
 
 ## Before you install
 
@@ -69,26 +83,43 @@ Use the **Open this repository in HACS** button above, or add it manually:
 3. Open the three-dot menu and select `Custom repositories`.
 4. Add `https://github.com/Herbertmt978/HA-ScorpionTrack-Integration`.
 5. Select `Integration` as the category.
-6. Download `ScorpionTrack Integration`.
+6. Download `ScorpionTrack Portal`.
 7. Restart Home Assistant.
 
 <details>
 <summary><strong>Manual installation</strong></summary>
 
 1. Download this repository's latest release.
-2. Copy `custom_components/scorpiontrack` into Home Assistant's `custom_components` directory.
+2. Copy `custom_components/scorpiontrack_portal` into Home Assistant's `custom_components` directory.
 3. Restart Home Assistant.
 
 Manual installations must be updated manually by replacing the same directory with files from a newer release.
 
 </details>
 
+## Upgrade from ScorpionTrack Integration 0.3.x
+
+Versions 0.3.x and earlier used the built-in `scorpiontrack` domain. Their config entries, devices and entities cannot move to the new `scorpiontrack_portal` domain automatically, so each entry has to be added again. Follow these steps in order:
+
+1. Create a Home Assistant backup.
+2. Note how each ScorpionTrack entry is set up: portal email, any share link and the speed unit. You will need the portal password again.
+3. Open `Settings > Devices & services` and delete every entry under `ScorpionTrack Integration`. Deleting them first also removes their old devices and entities, so the new entities can normally reuse the same entity IDs.
+4. In HACS, open this repository (listed as `ScorpionTrack Integration`, or `ScorpionTrack Portal` once HACS has refreshed it) and remove the download. Then make sure the `custom_components/scorpiontrack` directory no longer exists, and delete it if it does. While that directory exists, it still replaces the built-in integration.
+5. In HACS, select `Update information` on this repository, then download `ScorpionTrack Portal`. For a manual installation, copy `custom_components/scorpiontrack_portal` instead.
+6. Restart Home Assistant.
+7. Add `ScorpionTrack Portal` and set up each portal account or share again.
+8. Check that automations, scripts and dashboards still refer to the right entities. If an entity ID changed, for example by gaining a `_2` suffix, rename it from the entity's settings.
+
+Shared-link entries can instead move to the built-in `ScorpionTrack` integration if you do not need portal features.
+
+If you updated before deleting the old entries, they are left under the built-in integration's domain. Portal-account entries cannot load there, because the built-in integration supports shared-location links only. Delete those entries, check that `custom_components/scorpiontrack` has gone, restart, and add them again under `ScorpionTrack Portal`. Do not edit Home Assistant's `.storage` files manually.
+
 ## Verify the installation
 
 After restarting Home Assistant:
 
 1. Open `Settings > Devices & services`.
-2. Select `Add integration` and search for `ScorpionTrack Integration`.
+2. Select `Add integration` and search for `ScorpionTrack Portal`. If the built-in integration is available, it is listed separately as `ScorpionTrack`.
 3. Complete one of the setup routes below.
 4. Confirm the config entry shows as loaded.
 5. Confirm each vehicle has a device and `device_tracker` entity.
@@ -121,7 +152,7 @@ Portal-account mode provides:
 The portal account feed can return location data less frequently than Home Assistant polls it. To retain account alerts and controls while receiving newer live vehicle data:
 
 1. Create a ScorpionTrack location share containing the same vehicle or vehicles.
-2. Open the ScorpionTrack config entry and select `Configure`.
+2. Open the ScorpionTrack Portal config entry and select `Configure`.
 3. Paste the share URL or token, choose `mph` or `km/h`, and save.
 
 Hybrid mode continues to refresh authenticated account data every 5 minutes. It refreshes the optional share every 2 minutes and overlays only a position that is at least as recent as the account position. Vehicle IDs are matched first, with a unique normalized registration as a fallback. Location, speed, heading, ignition, and derived status can therefore update faster without duplicating account devices or entities.
@@ -163,7 +194,7 @@ Only controls verified to behave as true on/off operations are writable.
 ### Update
 
 1. Create a Home Assistant backup and read the [release notes](https://github.com/Herbertmt978/HA-ScorpionTrack-Integration/releases).
-2. Open HACS and find `ScorpionTrack Integration`.
+2. Open HACS and find `ScorpionTrack Portal`.
 3. If a release is missing, use the HACS three-dot menu and select `Update information` to refresh repository metadata.
 4. Select `Download` or `Redownload` to install the release.
 5. Restart Home Assistant.
@@ -179,22 +210,27 @@ Only controls verified to behave as true on/off operations are writable.
 4. Download it, restart Home Assistant, and verify the config entries.
 5. Restore the backup or return to the latest release if the older version cannot load the current entries.
 
-### Switch to the built-in integration
+Do not roll back to 0.3.x or earlier with HACS. Those versions use the built-in `scorpiontrack` domain, cannot load `ScorpionTrack Portal` entries and would replace the built-in integration again. Restore the backup taken before upgrading instead.
+
+### Move shared links to the built-in integration
+
+You do not need to remove ScorpionTrack Portal to use the built-in integration. To move a shared-location link across:
 
 1. Create a backup and make sure you can recreate a valid shared-location link.
-2. Remove every ScorpionTrack config entry from `Settings > Devices & services`.
-3. Remove this custom repository from HACS.
-4. Restart Home Assistant.
-5. Open `Settings > Devices & services > Add integration`, search for `ScorpionTrack`, and add the shared-location link again.
+2. Open `Settings > Devices & services > Add integration`, search for `ScorpionTrack`, and add the shared-location link.
+3. Delete the matching `ScorpionTrack Portal` entry so the vehicles do not appear twice.
+4. Update automations, scripts and dashboards that used the old entities.
 
-Portal-account entries cannot be moved to the built-in integration because it supports shared-location links only. Do not assume an entry will migrate automatically, and do not edit Home Assistant's `.storage` files manually.
+Portal-account entries cannot be moved to the built-in integration because it supports shared-location links only. Do not edit Home Assistant's `.storage` files manually.
 
 ### Remove completely
 
 1. Create a backup.
-2. Remove every ScorpionTrack config entry from `Settings > Devices & services`.
-3. Remove this repository from HACS, or delete `custom_components/scorpiontrack` for a manual installation.
+2. Remove every ScorpionTrack Portal config entry from `Settings > Devices & services`.
+3. Remove this repository from HACS, or delete `custom_components/scorpiontrack_portal` for a manual installation.
 4. Restart Home Assistant.
+
+Removing ScorpionTrack Portal does not affect entries in the built-in ScorpionTrack integration.
 
 Removing repository files from HACS does not remove related Home Assistant configuration, which is why the config entries must be removed first.
 
@@ -218,16 +254,18 @@ Report security problems privately through the repository's [security advisory f
 | Portal login is rejected | Confirm the credentials in the ScorpionTrack portal and complete any portal-side verification first |
 | Share is unavailable | Confirm the link is still active, has not expired, and contains at least one vehicle |
 | Entities stop updating | Check the config-entry status, Home Assistant logs, and ScorpionTrack service availability |
-| Built-in integration appears instead | Confirm this repository is installed, then restart Home Assistant |
+| Built-in ScorpionTrack is still replaced by a custom integration | Delete the leftover `custom_components/scorpiontrack` directory from version 0.3.x, then restart Home Assistant |
+| ScorpionTrack entries fail to load after updating from 0.3.x | Delete those entries and add them again under `ScorpionTrack Portal`, as described in [Upgrade from ScorpionTrack Integration 0.3.x](#upgrade-from-scorpiontrack-integration-03x) |
+| Vehicles appear twice | The same share is configured in both integrations; delete it from one of them |
 
-Download diagnostics from the ScorpionTrack config entry's menu under `Settings > Devices & services`. Diagnostics are designed for issue reports, but review the file before uploading it.
+Download diagnostics from the ScorpionTrack Portal config entry's menu under `Settings > Devices & services`. Diagnostics are designed for issue reports, but review the file before uploading it.
 
 For deeper logs, add:
 
 ```yaml
 logger:
   logs:
-    custom_components.scorpiontrack: debug
+    custom_components.scorpiontrack_portal: debug
 ```
 
 Before opening a [bug report](https://github.com/Herbertmt978/HA-ScorpionTrack-Integration/issues/new/choose), include:

@@ -1,6 +1,6 @@
 {
-  "domain": "scorpiontrack",
-  "name": "ScorpionTrack Integration",
+  "domain": "scorpiontrack_portal",
+  "name": "ScorpionTrack Portal",
   "codeowners": ["@Herbertmt978"],
   "config_flow": true,
   "documentation": "https://github.com/Herbertmt978/ha-scorpiontrack-integration",

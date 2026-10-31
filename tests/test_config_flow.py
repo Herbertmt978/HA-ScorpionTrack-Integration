@@ -21,15 +21,15 @@ from pyscorpiontrack import (
 )
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.scorpiontrack.account_api import (
+from custom_components.scorpiontrack_portal.account_api import (
     ScorpionTrackAccountData,
     ScorpionTrackAuthError,
     ScorpionTrackPortalError,
 )
-from custom_components.scorpiontrack.account_api import (
+from custom_components.scorpiontrack_portal.account_api import (
     ScorpionTrackConnectionError as ScorpionTrackAccountConnectionError,
 )
-from custom_components.scorpiontrack.const import (
+from custom_components.scorpiontrack_portal.const import (
     CONF_SETUP_TYPE,
     CONF_SHARE_TOKEN,
     DOMAIN,
@@ -37,14 +37,14 @@ from custom_components.scorpiontrack.const import (
     SETUP_TYPE_SHARE,
     SHARE_DEFAULT_NAME,
 )
-from custom_components.scorpiontrack.utils import stable_hash
+from custom_components.scorpiontrack_portal.utils import stable_hash
 
 
 @pytest.fixture(autouse=True)
 def prevent_entry_setup(monkeypatch: pytest.MonkeyPatch) -> None:
     """Keep config-flow tests isolated from config-entry setup side effects."""
     monkeypatch.setattr(
-        "custom_components.scorpiontrack.async_setup_entry",
+        "custom_components.scorpiontrack_portal.async_setup_entry",
         AsyncMock(return_value=True),
     )
 

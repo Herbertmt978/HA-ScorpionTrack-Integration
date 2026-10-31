@@ -108,7 +108,7 @@ class AutoMergePolicyTest(unittest.TestCase):
         for files in (
             "uv.lock",
             "pyproject.toml",
-            "pyproject.toml\nuv.lock\ncustom_components/scorpiontrack/api.py",
+            "pyproject.toml\nuv.lock\ncustom_components/scorpiontrack_portal/api.py",
             "pyproject.toml\nuv.lock\n.github/workflows/dependabot-automerge.yml",
         ):
             with self.subTest(files=files):

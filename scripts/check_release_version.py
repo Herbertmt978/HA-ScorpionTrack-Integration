@@ -26,7 +26,7 @@ def validate_versions(
     ref_name: str | None = None,
 ) -> str:
     """Validate metadata and return the common release version."""
-    manifest = _load_json(root / "custom_components/scorpiontrack/manifest.json")
+    manifest = _load_json(root / "custom_components/scorpiontrack_portal/manifest.json")
     project = _load_toml(root / "pyproject.toml")
     lock = _load_toml(root / "uv.lock")
 

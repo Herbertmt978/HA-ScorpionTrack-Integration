@@ -19,7 +19,7 @@ import pytest
 from aiohttp import ClientError
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
-_COMPONENT_DIR = _REPO_ROOT / "custom_components" / "scorpiontrack"
+_COMPONENT_DIR = _REPO_ROOT / "custom_components" / "scorpiontrack_portal"
 _TEST_PACKAGE = "_scorpiontrack_under_test"
 
 

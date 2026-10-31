@@ -9,8 +9,8 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.scorpiontrack.account_api import ScorpionTrackPortalError
-from custom_components.scorpiontrack.const import DOMAIN
+from custom_components.scorpiontrack_portal.account_api import ScorpionTrackPortalError
+from custom_components.scorpiontrack_portal.const import DOMAIN
 
 from . import setup_integration
 

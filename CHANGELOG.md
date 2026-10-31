@@ -4,7 +4,11 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
-No changes yet.
+### Changed
+
+- **Breaking:** Rename the integration to ScorpionTrack Portal and move it to its own `scorpiontrack_portal` domain (`custom_components/scorpiontrack_portal`). It no longer replaces Home Assistant's built-in ScorpionTrack integration, and both can now be installed and configured at the same time.
+- Entries, devices and entities created by 0.3.x and earlier stay under the built-in `scorpiontrack` domain and are not migrated. Delete them before updating, remove any leftover `custom_components/scorpiontrack` directory, and add each portal account or share again. The README describes the upgrade steps.
+- Debug logging now uses the `custom_components.scorpiontrack_portal` logger.
 
 ## 0.3.4 - 2026-10-12
 
