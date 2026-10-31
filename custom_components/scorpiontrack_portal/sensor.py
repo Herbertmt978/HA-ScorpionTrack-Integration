@@ -31,6 +31,7 @@ from .coordinator import (
     ScorpionTrackAccountCoordinator,
     ScorpionTrackConfigEntry,
     ScorpionTrackShareCoordinator,
+    share_vehicle_status,
 )
 from .entity import (
     ScorpionTrackAccountEntity,
@@ -283,7 +284,9 @@ SHARE_VEHICLE_SENSORS: tuple[ScorpionTrackShareVehicleSensorDescription, ...] = 
         translation_key="status",
         device_class=SensorDeviceClass.ENUM,
         options=SHARE_VEHICLE_STATUSES,
-        value_fn=lambda vehicle: _status(vehicle.status, SHARE_VEHICLE_STATUSES),
+        value_fn=lambda vehicle: _status(
+            share_vehicle_status(vehicle), SHARE_VEHICLE_STATUSES
+        ),
     ),
     ScorpionTrackShareVehicleSensorDescription(
         key="speed",

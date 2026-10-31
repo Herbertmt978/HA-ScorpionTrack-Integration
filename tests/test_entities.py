@@ -300,6 +300,64 @@ async def test_account_mode_windows_follow_the_clock_with_unchanged_payload(
     assert _state(hass, entity_registry, "binary_sensor", unique_id).state == "off"
 
 
+@pytest.mark.parametrize(
+    ("speed_kmh", "ignition", "expected"),
+    [
+        (1.0, False, "parked"),
+        (2.9, None, "parked"),
+        (1.0, True, "idle"),
+        (3.0, False, "moving"),
+    ],
+)
+async def test_hybrid_status_ignores_gps_drift(
+    hass: HomeAssistant,
+    entity_registry: er.EntityRegistry,
+    hybrid_account_config_entry: MockConfigEntry,
+    client_mocks: SimpleNamespace,
+    mock_share: ScorpionTrackShare,
+    speed_kmh: float,
+    ignition: bool | None,
+    expected: str,
+) -> None:
+    """A share speed below the portal's 3 km/h threshold is not movement."""
+    share = _with_share_position(
+        mock_share,
+        timestamp=datetime.now(UTC),
+        speed_kmh=speed_kmh,
+        ignition=ignition,
+    )
+    client_mocks.share.async_get_share.return_value = replace(
+        share, vehicles=(replace(share.vehicles[0], status="moving"),)
+    )
+    await setup_integration(hass, hybrid_account_config_entry)
+
+    assert _state(hass, entity_registry, "sensor", "42_2001_status").state == expected
+
+
+@pytest.mark.parametrize(
+    ("speed_kmh", "ignition", "expected"),
+    [(1.0, False, "parked"), (1.0, True, "idle"), (3.0, False, "moving")],
+)
+async def test_share_status_ignores_gps_drift(
+    hass: HomeAssistant,
+    entity_registry: er.EntityRegistry,
+    share_config_entry: MockConfigEntry,
+    client_mocks: SimpleNamespace,
+    mock_share: ScorpionTrackShare,
+    speed_kmh: float,
+    ignition: bool | None,
+    expected: str,
+) -> None:
+    """Shared-link status applies the same 3 km/h moving threshold."""
+    share = _with_share_position(mock_share, speed_kmh=speed_kmh, ignition=ignition)
+    client_mocks.share.async_get_share.return_value = replace(
+        share, vehicles=(replace(share.vehicles[0], status="moving"),)
+    )
+    await setup_integration(hass, share_config_entry)
+
+    assert _state(hass, entity_registry, "sensor", "101_2001_status").state == expected
+
+
 async def test_hybrid_account_uses_newer_share_position(
     hass: HomeAssistant,
     entity_registry: er.EntityRegistry,

@@ -39,7 +39,13 @@ from .account_api import (
     ScorpionTrackVehiclePosition,
     ScorpionTrackVehicleSummary,
 )
-from .const import ACCOUNT_SCAN_INTERVAL, DOMAIN, MANUFACTURER, SHARE_SCAN_INTERVAL
+from .const import (
+    ACCOUNT_SCAN_INTERVAL,
+    DOMAIN,
+    MANUFACTURER,
+    MOVING_SPEED_THRESHOLD_KMH,
+    SHARE_SCAN_INTERVAL,
+)
 from .utils import stable_hash
 
 _LOGGER = logging.getLogger(__name__)
@@ -291,6 +297,22 @@ def hybrid_share_issue_id(entry: ScorpionTrackConfigEntry) -> str:
     return f"hybrid_share_unavailable_{entry.entry_id}"
 
 
+def share_vehicle_status(vehicle: ScorpionTrackVehicle) -> str:
+    """Return a shared vehicle's status using the portal's moving threshold.
+
+    pyscorpiontrack reports any speed above zero as moving, so GPS drift on a
+    parked vehicle would otherwise read as movement.
+    """
+    position = vehicle.position
+    if (
+        vehicle.status == "moving"
+        and position.speed_kmh is not None
+        and position.speed_kmh < MOVING_SPEED_THRESHOLD_KMH
+    ):
+        return "idle" if position.ignition else "parked"
+    return vehicle.status
+
+
 def _async_remove_stale_devices(
     hass: HomeAssistant,
     entry: ScorpionTrackConfigEntry,
@@ -404,6 +426,7 @@ def _merge_share_position(
         return account_vehicle
 
     base = account_position or _empty_account_position()
+    status = share_vehicle_status(share_vehicle)
     if share_position.latitude is None or share_position.longitude is None:
         latitude, longitude = base.latitude, base.longitude
         address = base.address
@@ -421,13 +444,13 @@ def _merge_share_position(
         address=address,
         ignition=share_position.ignition,
         raw_state=share_vehicle.status,
-        friendly_state=share_vehicle.status,
+        friendly_state=status,
     )
     return replace(
         account_vehicle,
         position=position,
         raw_state=share_vehicle.status,
-        status=share_vehicle.status,
+        status=status,
     )
 
 

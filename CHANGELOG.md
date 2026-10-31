@@ -6,6 +6,12 @@ All notable changes to this project are documented here.
 
 No changes yet.
 
+## 0.5.1 - 2026-10-31
+
+### Fixed
+
+- A parked vehicle whose shared-location speed is only GPS drift (below 3 km/h) is no longer reported as moving. Hybrid and shared-location entries now apply the same 3 km/h threshold the portal uses, reporting `parked`, or `idle` with the ignition on.
+
 ## 0.5.0 - 2026-10-31
 
 This release brings the integration in line with Home Assistant Core's Platinum quality scale. It changes entities that automations, scripts, templates and dashboards may use; the README's "Upgrade to 0.5.0" section lists a replacement for every removed attribute and entity.
