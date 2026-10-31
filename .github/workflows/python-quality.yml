@@ -69,7 +69,9 @@ jobs:
           enable-cache: true
           cache-suffix: py3.14
       - name: Install test environment
-        run: uv sync --locked --only-group test --python 3.14
+        run: uv sync --locked --only-group test --only-group typing --python 3.14
+      - name: Strict type check
+        run: uv run --locked --only-group test --only-group typing mypy
       - name: Require full config-flow coverage
         run: >
           uv run --locked --only-group test

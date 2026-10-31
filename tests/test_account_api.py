@@ -407,8 +407,9 @@ def test_transport_errors_do_not_log_credentials_or_authorization(
         for record in caplog.records
         if record.name == account_api.__name__
     )
-    assert "p***@example.test" in logged
+    assert "Error contacting the ScorpionTrack" in logged
     assert email not in logged
+    assert "example.test" not in logged
     assert password not in logged
     assert api_key not in logged
     assert authorization not in logged
@@ -429,7 +430,7 @@ def test_http_errors_redact_internal_path_identifiers(
         else f"/vehicles/{internal_ids[0]}"
     )
     client = _client(FakeSession(status=500))
-    caplog.set_level(logging.WARNING, logger=account_api.__name__)
+    caplog.set_level(logging.DEBUG, logger=account_api.__name__)
 
     with pytest.raises(ScorpionTrackConnectionError) as raised:
         if request_kind == "portal":

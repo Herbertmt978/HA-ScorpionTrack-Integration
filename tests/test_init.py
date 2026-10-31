@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from dataclasses import replace
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, patch
 
 import pytest
 from homeassistant import loader
@@ -30,15 +29,13 @@ from custom_components.scorpiontrack_portal.account_api import (
 from custom_components.scorpiontrack_portal.account_api import (
     ScorpionTrackConnectionError as ScorpionTrackAccountConnectionError,
 )
-from custom_components.scorpiontrack_portal.account_coordinator import (
-    ScorpionTrackAccountCoordinator,
-)
 from custom_components.scorpiontrack_portal.const import (
     CONF_SETUP_TYPE,
     CONF_SHARE_TOKEN,
     DOMAIN,
 )
-from custom_components.scorpiontrack_portal.share_coordinator import (
+from custom_components.scorpiontrack_portal.coordinator import (
+    ScorpionTrackAccountCoordinator,
     ScorpionTrackShareCoordinator,
 )
 from custom_components.scorpiontrack_portal.utils import stable_hash
@@ -59,8 +56,8 @@ async def test_custom_integration_is_loaded(hass: HomeAssistant) -> None:
 @pytest.mark.parametrize(
     ("entry_fixture", "coordinator_type", "expected_entities"),
     [
-        ("share_config_entry", ScorpionTrackShareCoordinator, 13),
-        ("account_config_entry", ScorpionTrackAccountCoordinator, 53),
+        ("share_config_entry", ScorpionTrackShareCoordinator, 7),
+        ("account_config_entry", ScorpionTrackAccountCoordinator, 31),
     ],
 )
 async def test_setup_runtime_data_entity_count_and_unload(
@@ -86,22 +83,6 @@ async def test_setup_runtime_data_entity_count_and_unload(
     assert entry.state is ConfigEntryState.NOT_LOADED
 
 
-async def test_core_share_entry_without_setup_type_is_compatible(
-    hass: HomeAssistant,
-) -> None:
-    """A share entry created by Core should load under the richer override."""
-    entry = MockConfigEntry(
-        domain=DOMAIN,
-        title="Family Cars",
-        data={CONF_SHARE_TOKEN: "canonical-token"},
-        unique_id="101",
-    )
-    await setup_integration(hass, entry)
-
-    assert entry.state is ConfigEntryState.LOADED
-    assert isinstance(entry.runtime_data, ScorpionTrackShareCoordinator)
-
-
 async def test_hybrid_account_uses_fast_share_coordinator_interval(
     hass: HomeAssistant,
     hybrid_account_config_entry: MockConfigEntry,
@@ -117,31 +98,141 @@ async def test_hybrid_account_uses_fast_share_coordinator_interval(
     client_mocks.share.async_get_share.assert_awaited_once()
 
 
-async def test_options_update_reloads_entry(
+@pytest.mark.parametrize(
+    ("options", "expected_share_token"),
+    [
+        ({"share_token": " canonical-token ", "speed_unit": "km/h"}, "canonical-token"),
+        ({"share_token": "", "speed_unit": "km/h"}, None),
+        ({"speed_unit": "km/h"}, None),
+    ],
+)
+async def test_migrate_hybrid_share_token_into_entry_data(
     hass: HomeAssistant,
-    account_config_entry: MockConfigEntry,
+    options: dict[str, str],
+    expected_share_token: str | None,
 ) -> None:
-    """Changing speed/share options should reload the active entry."""
-    with patch.object(
-        hass.config_entries,
-        "async_reload",
-        AsyncMock(return_value=True),
-    ) as reload_entry:
-        from custom_components.scorpiontrack_portal import _async_reload_entry
-
-        await _async_reload_entry(hass, account_config_entry)
-
-    reload_entry.assert_awaited_once_with(account_config_entry.entry_id)
-
-
-async def test_unknown_entry_type_fails_cleanly(hass: HomeAssistant) -> None:
-    """Malformed legacy entries should fail setup instead of raising ValueError."""
+    """Version 1.1 entries keep their optional share token as connection data."""
     entry = MockConfigEntry(
         domain=DOMAIN,
-        data={CONF_SETUP_TYPE: "unsupported"},
+        title="ScorpionTrack (Owner)",
+        data={
+            CONF_SETUP_TYPE: "account",
+            CONF_EMAIL: "owner@example.com",
+            CONF_PASSWORD: "correct-password",
+        },
+        options=options,
+        unique_id="account_42",
+        minor_version=1,
     )
     await setup_integration(hass, entry)
-    assert entry.state is ConfigEntryState.SETUP_ERROR
+
+    assert entry.state is ConfigEntryState.LOADED
+    assert entry.minor_version == 3
+    assert entry.data.get(CONF_SHARE_TOKEN) == expected_share_token
+    assert entry.options == {}
+    assert (entry.runtime_data.share_client is not None) is (
+        expected_share_token is not None
+    )
+
+
+async def test_migrate_removes_speed_unit_option(hass: HomeAssistant) -> None:
+    """Version 1.2 entries drop the speed-unit option for Home Assistant's units."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={CONF_SETUP_TYPE: "share", CONF_SHARE_TOKEN: "canonical-token"},
+        options={"speed_unit": "mph"},
+        unique_id="share_101",
+        minor_version=2,
+    )
+    await setup_integration(hass, entry)
+
+    assert entry.state is ConfigEntryState.LOADED
+    assert entry.minor_version == 3
+    assert entry.data == {CONF_SETUP_TYPE: "share", CONF_SHARE_TOKEN: "canonical-token"}
+    assert entry.options == {}
+
+
+@pytest.mark.parametrize(
+    ("entry_fixture", "removed", "kept"),
+    [
+        (
+            "account_config_entry",
+            [
+                ("sensor", "42_vehicle_count"),
+                ("sensor", "42_last_refreshed"),
+                ("sensor", "42_2001_location"),
+                ("sensor", "42_2001_registration"),
+                ("sensor", "42_2001_unit_model"),
+                ("sensor", "42_2001_pending_command_count"),
+                ("binary_sensor", "42_2001_location_stale"),
+                ("binary_sensor", "42_2001_immobiliser_fitted"),
+            ],
+            [
+                ("sensor", "42_2001_speed"),
+                ("sensor", "42_2001_odometer"),
+                ("sensor", "42_unread_alerts"),
+                ("binary_sensor", "42_2001_pending_commands"),
+            ],
+        ),
+        (
+            "share_config_entry",
+            [
+                ("sensor", "101_share_share_title"),
+                ("sensor", "101_2001_share_expires"),
+                ("sensor", "101_2001_location"),
+                ("binary_sensor", "101_2001_location_stale"),
+            ],
+            [
+                ("sensor", "101_share_share_expires"),
+                ("sensor", "101_2001_status"),
+            ],
+        ),
+    ],
+)
+async def test_migrate_removes_entities_no_longer_provided(
+    hass: HomeAssistant,
+    entity_registry: er.EntityRegistry,
+    request: pytest.FixtureRequest,
+    entry_fixture: str,
+    removed: list[tuple[str, str]],
+    kept: list[tuple[str, str]],
+) -> None:
+    """Upgrading to 1.3 removes only the registry entries for retired entities."""
+    fixture_entry: MockConfigEntry = request.getfixturevalue(entry_fixture)
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title=fixture_entry.title,
+        data=fixture_entry.data,
+        unique_id=fixture_entry.unique_id,
+        entry_id=fixture_entry.entry_id,
+        minor_version=2,
+    )
+    entry.add_to_hass(hass)
+    for domain, unique_id in (*removed, *kept):
+        entity_registry.async_get_or_create(
+            domain, DOMAIN, unique_id, config_entry=entry
+        )
+
+    await setup_integration(hass, entry)
+
+    assert entry.minor_version == 3
+    for domain, unique_id in removed:
+        assert entity_registry.async_get_entity_id(domain, DOMAIN, unique_id) is None
+    for domain, unique_id in kept:
+        assert entity_registry.async_get_entity_id(domain, DOMAIN, unique_id)
+
+
+async def test_migration_from_future_version_fails(hass: HomeAssistant) -> None:
+    """An entry from a newer major version must not be downgraded."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={CONF_SETUP_TYPE: "share", CONF_SHARE_TOKEN: "canonical-token"},
+        unique_id="share_101",
+        version=2,
+    )
+    await setup_integration(hass, entry)
+
+    assert entry.state is ConfigEntryState.MIGRATION_ERROR
 
 
 @pytest.mark.parametrize(
@@ -239,6 +330,25 @@ async def test_vehicle_device_identity_is_preserved(
     assert device.name == name
     assert device.manufacturer == manufacturer
     assert device.model == model
+
+
+async def test_account_vehicle_devices_link_to_the_account_device(
+    hass: HomeAssistant,
+    device_registry: dr.DeviceRegistry,
+    account_config_entry: MockConfigEntry,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Vehicle devices link to the account device by registry ID."""
+    await setup_integration(hass, account_config_entry)
+
+    account = device_registry.async_get_device(identifiers={(DOMAIN, "account_42")})
+    vehicle = device_registry.async_get_device(
+        identifiers={(DOMAIN, "42_vehicle_2001")}
+    )
+    assert account is not None
+    assert vehicle is not None
+    assert vehicle.via_device_id == account.id
+    assert "via_device" not in caplog.text
 
 
 async def test_fallback_account_identity_survives_later_user_id(

@@ -33,6 +33,7 @@ Run the same quality checks used by CI:
 ```bash
 uv run --locked --all-groups ruff check .
 uv run --locked --all-groups ruff format --check --diff .
+uv run --locked --all-groups mypy
 uv run --locked --all-groups pytest tests/test_config_flow.py \
   --cov=custom_components.scorpiontrack_portal.config_flow \
   --cov-report=term-missing \

@@ -6,6 +6,61 @@ All notable changes to this project are documented here.
 
 No changes yet.
 
+## 0.5.0 - 2026-10-31
+
+This release brings the integration in line with Home Assistant Core's Platinum quality scale. It changes entities that automations, scripts, templates and dashboards may use; the README's "Upgrade to 0.5.0" section lists a replacement for every removed attribute and entity.
+
+### Breaking changes
+
+- Remove the extra state attributes from every entity, including the vehicle tracker. Use the dedicated sensors, binary sensors and switches instead.
+- Remove these entities:
+  - Location and Location stale, in both modes
+  - Portal state, Vehicle count, User ID, Last refreshed and Installed
+  - Registration, Description, Alias, Colour, Fuel type, Battery type, Make, Model, Vehicle type, Unit make and Unit model
+  - Pending command count
+  - Driver module fitted, Installation complete and Immobiliser fitted
+  - Share title, Shared by, Share created, and each vehicle's Share expires
+
+  Updating from 0.4.0 removes their registry entries automatically.
+- Remove the speed-unit option and the `Configure` dialog. Speed and Odometer now report km/h and km and are displayed in mph and miles when the account or share uses miles. Existing entities keep their display unit, and any unit can be changed from the entity's settings.
+- Status is an enum with fixed lowercase states: `moving`, `parked`, `idle`, `ignition`, `alarm` and `alert` (shared links: `moving`, `parked` and `idle`). Unrecognised values are `unknown`; hybrid entries previously reported title case such as `Moving`.
+- Heading reports unrounded degrees (`°`) and is disabled by default for new setups.
+- Rename entities to sentence case without "Active" or "Enabled", for example `Transport mode` and `Armed mode`. Existing entity IDs are unchanged; new setups get IDs from the new names.
+- Disable Heading, Last service date, Unit last checked in, Backup battery voltage, GPS antenna voltage, GPS antenna current, GPS satellites and GPS HDOP by default for new setups.
+- Make Armed mode, EWM, G-Sense and Pending commands diagnostic entities.
+- Move the hybrid share link from `Configure` to `Reconfigure`.
+- Remove devices for vehicles that leave an account or share. They are recreated if the vehicle returns, but customisations of their entities are lost.
+
+### Added
+
+- Reconfigure: add, replace or remove a portal account's hybrid share link, or give a shared-location entry a new link for the same share.
+- A repair issue when a hybrid share link has expired, been revoked or become invalid, cleared once the link works again or is replaced.
+- Authentication failures during a switch or button action now start reauthentication.
+- Odometer has the distance device class and long-term statistics, and Engine has the running device class.
+- Entity names, status states and icons are translated, and status icons change with the state.
+
+### Fixed
+
+- A vehicle that returned to an account or share after being removed never had its entities recreated.
+- Switch and button actions now run one at a time per platform; the concurrency setting was previously ignored.
+- Hybrid entries reported status in title case, unlike portal-only entries.
+- Link vehicle devices to the account device by registry ID. The previous identifier-based link is deprecated and stops working in Home Assistant 2027.8.
+- Portal-account scheduled modes (transport, garage and no-alert) now switch at their window boundaries even when the portal data is unchanged.
+
+### Changed
+
+- Reauthentication with credentials for a different account now aborts instead of showing an error.
+- Portal and fleet API failures are logged at debug level, and logs no longer include the account's email address. The optional hybrid share logs once when it fails and once when it recovers.
+- Unchanged shared-location data no longer rewrites entity states on every poll. Portal-account entities still update on every refresh, because scheduled modes depend on the time.
+- Config entries migrate automatically to version 1.3.
+
+### Developer
+
+- Restructure the integration into Home Assistant's standard `coordinator.py`, `entity.py` and single platform modules.
+- Add strict mypy, using Home Assistant Core's settings, to the required test job.
+- Add entity snapshot tests and a `quality_scale.yaml` self-assessment.
+- Remove compatibility code for Core-created entries, which cannot exist under the `scorpiontrack_portal` domain.
+
 ## 0.4.0 - 2026-10-31
 
 ### Changed

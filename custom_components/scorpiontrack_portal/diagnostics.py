@@ -1,4 +1,4 @@
-"""Privacy-safe diagnostics for the ScorpionTrack integration."""
+"""Privacy-safe diagnostics for ScorpionTrack Portal."""
 
 from __future__ import annotations
 
@@ -8,10 +8,8 @@ from typing import Any
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 
-from . import ScorpionTrackConfigEntry
-from .account_api import ScorpionTrackAccountData
-from .account_coordinator import ScorpionTrackAccountCoordinator
-from .const import get_setup_type
+from .const import CONF_SETUP_TYPE
+from .coordinator import ScorpionTrackAccountCoordinator, ScorpionTrackConfigEntry
 
 
 async def async_get_config_entry_diagnostics(
@@ -30,7 +28,7 @@ async def async_get_config_entry_diagnostics(
 
     diagnostics: dict[str, Any] = {
         "config_entry": {
-            "setup_type": get_setup_type(entry.data),
+            "setup_type": entry.data[CONF_SETUP_TYPE],
             "state": entry.state.value,
             "version": entry.version,
             "minor_version": entry.minor_version,
@@ -57,9 +55,7 @@ async def async_get_config_entry_diagnostics(
         },
     }
 
-    if isinstance(coordinator, ScorpionTrackAccountCoordinator) and isinstance(
-        coordinator.data, ScorpionTrackAccountData
-    ):
+    if isinstance(coordinator, ScorpionTrackAccountCoordinator):
         diagnostics["account"] = {
             "app_api_key_available": coordinator.data.app_api_key_available,
             "fms_api_available": coordinator.data.fms_api_available,

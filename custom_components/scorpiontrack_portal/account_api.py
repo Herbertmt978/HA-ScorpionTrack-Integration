@@ -26,7 +26,6 @@ from .const import (
     PORTAL_BASE_URL,
     VEHICLE_LIST_PAGE_PATH,
 )
-from .utils import mask_email
 
 _CSRF_TOKEN_RE = re.compile(r'name="ci_csrf_token"\s+value="([^"]+)"')
 _FMS_API_URL_RE = re.compile(r'window\.ScorpionData\.fmsApiUrl\s*=\s*"([^"]+)"')
@@ -301,9 +300,8 @@ class ScorpionTrackAccountClient:
         try:
             return await self._async_build_account_data()
         except ScorpionTrackAuthError:
-            _LOGGER.info(
-                "ScorpionTrack portal session expired while refreshing account %s; retrying login",
-                mask_email(self._email),
+            _LOGGER.debug(
+                "ScorpionTrack portal session expired while refreshing the account; retrying login",
             )
             await self.async_login(force=True)
             return await self._async_build_account_data()
@@ -317,16 +315,14 @@ class ScorpionTrackAccountClient:
         """Authenticate while holding the login lock."""
         if self._authenticated and not force:
             _LOGGER.debug(
-                "Reusing existing ScorpionTrack portal session for %s",
-                mask_email(self._email),
+                "Reusing existing ScorpionTrack portal session",
             )
             return
 
         self._authenticated = False
         self._portal_context = None
         _LOGGER.debug(
-            "Authenticating ScorpionTrack portal session for %s (force=%s)",
-            mask_email(self._email),
+            "Authenticating ScorpionTrack portal session (force=%s)",
             force,
         )
 
@@ -336,10 +332,9 @@ class ScorpionTrackAccountClient:
         csrf_token = _extract_first(_CSRF_TOKEN_RE, login_html)
         if not csrf_token:
             lowered = login_html.lower()
-            _LOGGER.warning(
-                "ScorpionTrack login page for %s did not expose a CSRF token "
+            _LOGGER.debug(
+                "ScorpionTrack login page did not expose a CSRF token "
                 "(status=%s, has_login_form=%s, has_password_field=%s)",
-                mask_email(self._email),
                 login_status,
                 'id="login_form"' in lowered,
                 'name="pass"' in lowered,
@@ -363,9 +358,8 @@ class ScorpionTrackAccountClient:
         )
 
         if _looks_like_login_error(response_html):
-            _LOGGER.warning(
-                "ScorpionTrack rejected the supplied credentials for %s",
-                mask_email(self._email),
+            _LOGGER.debug(
+                "ScorpionTrack rejected the supplied credentials",
             )
             raise ScorpionTrackAuthError(
                 "Portal login rejected the supplied credentials"
@@ -373,10 +367,9 @@ class ScorpionTrackAccountClient:
 
         portal_context = await self.async_get_portal_context()
         if not portal_context.app_api_key or not portal_context.fms_api_url:
-            _LOGGER.warning(
-                "ScorpionTrack portal login for %s completed but the authenticated page was "
+            _LOGGER.debug(
+                "ScorpionTrack portal login completed but the authenticated page was "
                 "missing expected API details (has_app_api_key=%s, has_fms_api_url=%s)",
-                mask_email(self._email),
                 bool(portal_context.app_api_key),
                 bool(portal_context.fms_api_url),
             )
@@ -387,8 +380,7 @@ class ScorpionTrackAccountClient:
         self._portal_context = portal_context
         self._authenticated = True
         _LOGGER.debug(
-            "Authenticated ScorpionTrack portal session for %s",
-            mask_email(self._email),
+            "Authenticated ScorpionTrack portal session",
         )
 
     async def async_get_portal_context(self) -> ScorpionTrackPortalContext:
@@ -399,9 +391,8 @@ class ScorpionTrackAccountClient:
             ajax=False,
         )
         if _looks_like_login_page(final_url, page_html):
-            _LOGGER.warning(
-                "ScorpionTrack vehicle list for %s redirected back to login",
-                mask_email(self._email),
+            _LOGGER.debug(
+                "ScorpionTrack vehicle list redirected back to login",
             )
             raise ScorpionTrackAuthError(
                 "Authenticated vehicle list page redirected back to login"
@@ -433,11 +424,9 @@ class ScorpionTrackAccountClient:
         )
 
         return tuple(
-            self._parse_vehicle(
-                payload, positions_by_id.get(_coerce_int(payload.get("id")))
-            )
+            self._parse_vehicle(payload, positions_by_id.get(vehicle_id))
             for payload in vehicle_payloads
-            if isinstance(payload, dict) and _coerce_int(payload.get("id")) is not None
+            if (vehicle_id := _coerce_int(payload.get("id"))) is not None
         )
 
     async def async_set_vehicle_mode(
@@ -528,17 +517,14 @@ class ScorpionTrackAccountClient:
             positions_by_id = await self._async_get_map_positions(vehicle_ids)
         except ScorpionTrackPortalError:
             _LOGGER.debug(
-                "ScorpionTrack map position fetch failed for %s",
-                mask_email(self._email),
+                "ScorpionTrack map position fetch failed",
             )
             positions_by_id = {}
 
         vehicles = tuple(
-            self._parse_vehicle(
-                payload, positions_by_id.get(_coerce_int(payload.get("id")))
-            )
+            self._parse_vehicle(payload, positions_by_id.get(vehicle_id))
             for payload in vehicle_payloads
-            if isinstance(payload, dict) and _coerce_int(payload.get("id")) is not None
+            if (vehicle_id := _coerce_int(payload.get("id"))) is not None
         )
 
         alerts: tuple[ScorpionTrackAlertSummary, ...] = ()
@@ -550,8 +536,7 @@ class ScorpionTrackAccountClient:
             )
         except ScorpionTrackPortalError:
             _LOGGER.debug(
-                "ScorpionTrack alerts fetch failed for %s",
-                mask_email(self._email),
+                "ScorpionTrack alerts fetch failed",
             )
             alerts = ()
             total_alerts = None
@@ -560,8 +545,7 @@ class ScorpionTrackAccountClient:
             unread_alerts = await self._async_get_unread_alert_count(portal_context)
         except ScorpionTrackPortalError:
             _LOGGER.debug(
-                "ScorpionTrack unread alert count fetch failed for %s",
-                mask_email(self._email),
+                "ScorpionTrack unread alert count fetch failed",
             )
             unread_alerts = None
 
@@ -605,10 +589,9 @@ class ScorpionTrackAccountClient:
                 },
             )
             if not isinstance(payload, dict):
-                _LOGGER.warning(
-                    "ScorpionTrack vehicle list endpoint returned a non-object payload for %s "
+                _LOGGER.debug(
+                    "ScorpionTrack vehicle list endpoint returned a non-object payload "
                     "(page=%s, limit=%s)",
-                    mask_email(self._email),
                     page,
                     limit,
                 )
@@ -645,9 +628,8 @@ class ScorpionTrackAccountClient:
         )
         payload = await self._request_json("GET", path, ajax=True)
         if not isinstance(payload, dict):
-            _LOGGER.warning(
-                "ScorpionTrack map positions endpoint returned a non-object payload for %s",
-                mask_email(self._email),
+            _LOGGER.debug(
+                "ScorpionTrack map positions endpoint returned a non-object payload",
             )
             raise ScorpionTrackPortalError(
                 "Vehicle map endpoint returned a non-object payload"
@@ -662,9 +644,9 @@ class ScorpionTrackAccountClient:
             if not isinstance(item, dict):
                 continue
             vehicle_id = _coerce_int(item.get("vehicleId"))
-            if vehicle_id is None:
-                continue
-            parsed[vehicle_id] = _parse_position(item)
+            position = _parse_position(item)
+            if vehicle_id is not None and position is not None:
+                parsed[vehicle_id] = position
 
         return parsed
 
@@ -715,9 +697,8 @@ class ScorpionTrackAccountClient:
         )
 
         if not isinstance(payload, dict):
-            _LOGGER.warning(
-                "ScorpionTrack alerts endpoint returned a non-object payload for %s",
-                mask_email(self._email),
+            _LOGGER.debug(
+                "ScorpionTrack alerts endpoint returned a non-object payload",
             )
             raise ScorpionTrackPortalError(
                 "Alerts endpoint returned a non-object payload"
@@ -755,10 +736,9 @@ class ScorpionTrackAccountClient:
             )
 
             if not isinstance(payload, dict):
-                _LOGGER.warning(
-                    "ScorpionTrack unread alerts endpoint returned a non-object payload for %s "
+                _LOGGER.debug(
+                    "ScorpionTrack unread alerts endpoint returned a non-object payload "
                     "(page=%s, page_size=%s)",
-                    mask_email(self._email),
                     page,
                     page_size,
                 )
@@ -831,9 +811,8 @@ class ScorpionTrackAccountClient:
                     status = response.status
                     final_url = str(response.url)
         except TimeoutError as err:
-            _LOGGER.warning(
-                "Timed out contacting the ScorpionTrack portal for %s (%s %s)",
-                mask_email(self._email),
+            _LOGGER.debug(
+                "Timed out contacting the ScorpionTrack portal (%s %s)",
                 method,
                 safe_path,
             )
@@ -841,9 +820,8 @@ class ScorpionTrackAccountClient:
                 "Timed out contacting the ScorpionTrack portal"
             ) from err
         except ClientError as err:
-            _LOGGER.warning(
-                "Error contacting the ScorpionTrack portal for %s (%s %s)",
-                mask_email(self._email),
+            _LOGGER.debug(
+                "Error contacting the ScorpionTrack portal (%s %s)",
                 method,
                 safe_path,
             )
@@ -853,15 +831,13 @@ class ScorpionTrackAccountClient:
 
         if final_url != url:
             _LOGGER.debug(
-                "ScorpionTrack portal request for %s redirected (%s %s)",
-                mask_email(self._email),
+                "ScorpionTrack portal request redirected (%s %s)",
                 method,
                 safe_path,
             )
         if status in (401, 403):
-            _LOGGER.warning(
-                "ScorpionTrack portal rejected the session for %s (%s %s, status=%s)",
-                mask_email(self._email),
+            _LOGGER.debug(
+                "ScorpionTrack portal rejected the session (%s %s, status=%s)",
                 method,
                 safe_path,
                 status,
@@ -870,10 +846,9 @@ class ScorpionTrackAccountClient:
         if not follow_redirects and status in (302, 303):
             return status, final_url, text
         if status in (408, 425, 429) or status >= 500:
-            _LOGGER.warning(
-                "ScorpionTrack portal returned HTTP %s for %s (%s %s)",
+            _LOGGER.debug(
+                "ScorpionTrack portal returned HTTP %s (%s %s)",
                 status,
-                mask_email(self._email),
                 method,
                 safe_path,
             )
@@ -881,10 +856,9 @@ class ScorpionTrackAccountClient:
                 f"Portal returned HTTP {status} for {safe_path}"
             )
         if status < 200 or status >= 300:
-            _LOGGER.warning(
-                "ScorpionTrack portal rejected request with HTTP %s for %s (%s %s)",
+            _LOGGER.debug(
+                "ScorpionTrack portal rejected request with HTTP %s (%s %s)",
                 status,
-                mask_email(self._email),
                 method,
                 safe_path,
             )
@@ -914,10 +888,9 @@ class ScorpionTrackAccountClient:
         )
 
         if _looks_like_login_page(final_url, text) or _looks_like_login_error(text):
-            _LOGGER.warning(
-                "ScorpionTrack portal endpoint for %s redirected to login instead of returning JSON "
+            _LOGGER.debug(
+                "ScorpionTrack portal endpoint redirected to login instead of returning JSON "
                 "(%s %s)",
-                mask_email(self._email),
                 method,
                 safe_path,
             )
@@ -928,9 +901,8 @@ class ScorpionTrackAccountClient:
         try:
             return json.loads(text)
         except json.JSONDecodeError as err:
-            _LOGGER.warning(
-                "ScorpionTrack portal endpoint for %s returned non-JSON content (%s %s, text_length=%s)",
-                mask_email(self._email),
+            _LOGGER.debug(
+                "ScorpionTrack portal endpoint returned non-JSON content (%s %s, text_length=%s)",
                 method,
                 safe_path,
                 len(text),
@@ -978,9 +950,8 @@ class ScorpionTrackAccountClient:
                     status = response.status
                     final_url = str(response.url)
         except TimeoutError as err:
-            _LOGGER.warning(
-                "Timed out contacting the ScorpionTrack fleet API for %s (%s %s)",
-                mask_email(self._email),
+            _LOGGER.debug(
+                "Timed out contacting the ScorpionTrack fleet API (%s %s)",
                 method,
                 safe_path,
             )
@@ -988,9 +959,8 @@ class ScorpionTrackAccountClient:
                 "Timed out contacting the ScorpionTrack fleet API"
             ) from err
         except ClientError as err:
-            _LOGGER.warning(
-                "Error contacting the ScorpionTrack fleet API for %s (%s %s)",
-                mask_email(self._email),
+            _LOGGER.debug(
+                "Error contacting the ScorpionTrack fleet API (%s %s)",
                 method,
                 safe_path,
             )
@@ -999,19 +969,17 @@ class ScorpionTrackAccountClient:
             ) from err
 
         if status in (401, 403):
-            _LOGGER.warning(
-                "ScorpionTrack fleet API rejected credentials for %s (%s %s, status=%s)",
-                mask_email(self._email),
+            _LOGGER.debug(
+                "ScorpionTrack fleet API rejected credentials (%s %s, status=%s)",
                 method,
                 safe_path,
                 status,
             )
             raise ScorpionTrackAuthError("Fleet API credentials were rejected")
         if status in (408, 425, 429) or status >= 500:
-            _LOGGER.warning(
-                "ScorpionTrack fleet API returned HTTP %s for %s (%s %s)",
+            _LOGGER.debug(
+                "ScorpionTrack fleet API returned HTTP %s (%s %s)",
                 status,
-                mask_email(self._email),
                 method,
                 safe_path,
             )
@@ -1019,10 +987,9 @@ class ScorpionTrackAccountClient:
                 f"Fleet API returned HTTP {status} for {safe_path}"
             )
         if status < 200 or status >= 300:
-            _LOGGER.warning(
-                "ScorpionTrack fleet API rejected request with HTTP %s for %s (%s %s)",
+            _LOGGER.debug(
+                "ScorpionTrack fleet API rejected request with HTTP %s (%s %s)",
                 status,
-                mask_email(self._email),
                 method,
                 safe_path,
             )
@@ -1057,9 +1024,8 @@ class ScorpionTrackAccountClient:
         try:
             return json.loads(text)
         except json.JSONDecodeError as err:
-            _LOGGER.warning(
-                "ScorpionTrack fleet API returned non-JSON content for %s (%s %s, text_length=%s)",
-                mask_email(self._email),
+            _LOGGER.debug(
+                "ScorpionTrack fleet API returned non-JSON content (%s %s, text_length=%s)",
                 method,
                 safe_path,
                 len(text),

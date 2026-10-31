@@ -4,12 +4,17 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
+import pytest
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.scorpiontrack_portal.account_api import ScorpionTrackPortalError
+from custom_components.scorpiontrack_portal.account_api import (
+    ScorpionTrackAuthError,
+    ScorpionTrackConnectionError,
+    ScorpionTrackPortalError,
+)
 from custom_components.scorpiontrack_portal.const import DOMAIN
 
 from . import setup_integration
@@ -80,27 +85,95 @@ async def test_mark_alerts_read_calls_portal_and_refreshes(
     assert client_mocks.account.async_refresh_account.await_count >= 2
 
 
-async def test_action_error_does_not_expose_upstream_text(
+@pytest.mark.parametrize(
+    ("unique_id", "translation_key"),
+    [
+        ("42_2001_privacy_mode", "privacy_mode_update_failed"),
+        ("42_2001_zero_speed_mode", "zero_speed_mode_update_failed"),
+    ],
+)
+async def test_switch_error_is_translated_without_upstream_text(
+    hass: HomeAssistant,
+    entity_registry: er.EntityRegistry,
+    account_config_entry: MockConfigEntry,
+    client_mocks: SimpleNamespace,
+    unique_id: str,
+    translation_key: str,
+) -> None:
+    """Portal failures surface as a translated error for the failing control."""
+    await setup_integration(hass, account_config_entry)
+    client_mocks.account.async_set_vehicle_mode.side_effect = ScorpionTrackPortalError(
+        "upstream-secret-marker"
+    )
+
+    with pytest.raises(HomeAssistantError) as raised:
+        await hass.services.async_call(
+            "switch",
+            "turn_on",
+            {"entity_id": _entity_id(entity_registry, "switch", unique_id)},
+            blocking=True,
+        )
+
+    assert raised.value.translation_key == translation_key
+    assert "upstream-secret-marker" not in str(raised.value)
+
+
+async def test_mark_alerts_read_error_is_translated(
     hass: HomeAssistant,
     entity_registry: er.EntityRegistry,
     account_config_entry: MockConfigEntry,
     client_mocks: SimpleNamespace,
 ) -> None:
-    """Portal exception text must not be surfaced through service failures."""
+    """A failed bulk-read surfaces as a translated error."""
     await setup_integration(hass, account_config_entry)
-    privacy = _entity_id(entity_registry, "switch", "42_2001_privacy_mode")
-    client_mocks.account.async_set_vehicle_mode.side_effect = ScorpionTrackPortalError(
-        "upstream-secret-marker"
+    client_mocks.account.async_mark_all_alerts_read.side_effect = (
+        ScorpionTrackConnectionError("upstream-secret-marker")
     )
 
-    try:
+    with pytest.raises(HomeAssistantError) as raised:
         await hass.services.async_call(
-            "switch",
-            "turn_on",
-            {"entity_id": privacy},
+            "button",
+            "press",
+            {"entity_id": _entity_id(entity_registry, "button", "42_mark_alerts_read")},
             blocking=True,
         )
-    except HomeAssistantError as err:
-        assert "upstream-secret-marker" not in str(err)
-    else:
-        raise AssertionError("Expected the failed portal write to reach the caller")
+
+    assert raised.value.translation_key == "mark_alerts_read_failed"
+    assert "upstream-secret-marker" not in str(raised.value)
+
+
+@pytest.mark.parametrize(
+    ("domain", "service", "unique_id", "client_method"),
+    [
+        ("switch", "turn_on", "42_2001_privacy_mode", "async_set_vehicle_mode"),
+        ("button", "press", "42_mark_alerts_read", "async_mark_all_alerts_read"),
+    ],
+)
+async def test_action_auth_error_starts_reauthentication(
+    hass: HomeAssistant,
+    entity_registry: er.EntityRegistry,
+    account_config_entry: MockConfigEntry,
+    client_mocks: SimpleNamespace,
+    domain: str,
+    service: str,
+    unique_id: str,
+    client_method: str,
+) -> None:
+    """Rejected credentials during an action prompt the user to sign in again."""
+    await setup_integration(hass, account_config_entry)
+    getattr(client_mocks.account, client_method).side_effect = ScorpionTrackAuthError(
+        "rejected"
+    )
+
+    with pytest.raises(HomeAssistantError) as raised:
+        await hass.services.async_call(
+            domain,
+            service,
+            {"entity_id": _entity_id(entity_registry, domain, unique_id)},
+            blocking=True,
+        )
+    await hass.async_block_till_done()
+
+    assert raised.value.translation_key == "invalid_auth"
+    flows = hass.config_entries.flow.async_progress_by_handler(DOMAIN)
+    assert [flow["context"]["source"] for flow in flows] == ["reauth"]

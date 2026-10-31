@@ -92,7 +92,7 @@ from .test_account_api_parsing import (
             {},
             "sensor",
             "heading",
-            "90",
+            "90.0",
         ),
         (
             {"timestamp": 10**30, "state": "OFF"},
@@ -158,24 +158,9 @@ from .test_account_api_parsing import (
             "last_reported",
             "2026-10-12T12:00:00+00:00",
         ),
-        (
-            {},
-            {},
-            {"installed": "bad", "unit": {"data": {"fitted": "2026-10-12T12:00:00Z"}}},
-            "sensor",
-            "installed",
-            "2026-10-12T12:00:00+00:00",
-        ),
-        (
-            {},
-            {},
-            {"installed": 0, "unit": {"data": {"fitted": "2026-10-12T12:00:00Z"}}},
-            "sensor",
-            "installed",
-            "1970-01-01T00:00:00+00:00",
-        ),
     ],
 )
+@pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_account_telemetry_boundaries(
     hass: HomeAssistant,
     entity_registry: er.EntityRegistry,
@@ -189,9 +174,15 @@ async def test_account_telemetry_boundaries(
     expected: str,
 ) -> None:
     """Keep zero and unknown readings, merge before deriving, reject bad numbers."""
+    # Speed rows assert parsed km/h, so use an account that displays km/h.
+    login = (
+        _login_responses(distance_units="kilometres")
+        if key == "speed"
+        else _login_responses()
+    )
     session = _ScriptedSession(
         [
-            *_login_responses(),
+            *login,
             _ResponseSpec(
                 json.dumps(
                     {
@@ -216,11 +207,6 @@ async def test_account_telemetry_boundaries(
     account = await _client(session).async_refresh_account()
     assert session.remaining == 0
     client_mocks.account.async_refresh_account.return_value = account
-    if key == "speed":
-        account_config_entry.add_to_hass(hass)
-        hass.config_entries.async_update_entry(
-            account_config_entry, options={"speed_unit": "km/h"}
-        )
     await setup_integration(hass, account_config_entry)
     entity_id = entity_registry.async_get_entity_id(domain, DOMAIN, f"42_2001_{key}")
     assert entity_id is not None
@@ -233,6 +219,44 @@ async def test_account_telemetry_boundaries(
         assert state.state == expected
     if key == "status" and map_data.get("state"):
         assert account.vehicles[0].position.friendly_state == expected
+
+
+@pytest.mark.parametrize(
+    ("installed", "expected"),
+    [("bad", "2026-10-12T12:00:00+00:00"), (0, "1970-01-01T00:00:00+00:00")],
+)
+async def test_installed_date_boundaries(installed: object, expected: str) -> None:
+    """An invalid install date falls back to the unit's fitted date; zero is kept."""
+    session = _ScriptedSession(
+        [
+            *_login_responses(),
+            _ResponseSpec(
+                json.dumps(
+                    {
+                        "vehicles": {
+                            "data": [
+                                {
+                                    "id": 2001,
+                                    "installed": installed,
+                                    "unit": {
+                                        "data": {"fitted": "2026-10-12T12:00:00Z"}
+                                    },
+                                }
+                            ]
+                        }
+                    }
+                )
+            ),
+            _ResponseSpec(json.dumps({"Positions": [{"vehicleId": 2001}]})),
+            _ResponseSpec(json.dumps({"data": [], "meta": {"total": 0}})),
+            _ResponseSpec(json.dumps({"data": []})),
+        ]
+    )
+    account = await _client(session).async_refresh_account()
+
+    installed_at = account.vehicles[0].installed_at
+    assert installed_at is not None
+    assert installed_at.isoformat() == expected
 
 
 @pytest.mark.parametrize("alert_data", [None, 123, {"unexpected": "object"}])

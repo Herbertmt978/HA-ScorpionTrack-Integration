@@ -1,4 +1,4 @@
-"""Coordinator for ScorpionTrack Account."""
+"""Data update coordinators for ScorpionTrack Portal."""
 
 from __future__ import annotations
 
@@ -10,8 +10,11 @@ from typing import override
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_EMAIL
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
+from homeassistant.core import HomeAssistant, callback
+from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryError
+from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import issue_registry as ir
+from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
 from pyscorpiontrack import (
@@ -36,35 +39,33 @@ from .account_api import (
     ScorpionTrackVehiclePosition,
     ScorpionTrackVehicleSummary,
 )
-from .const import (
-    ACCOUNT_SCAN_INTERVAL,
-    DOMAIN,
-    SHARE_SCAN_INTERVAL,
-    get_speed_unit,
-)
+from .const import ACCOUNT_SCAN_INTERVAL, DOMAIN, MANUFACTURER, SHARE_SCAN_INTERVAL
 from .utils import stable_hash
 
 _LOGGER = logging.getLogger(__name__)
 _NON_ALPHANUMERIC = re.compile(r"[^A-Z0-9]")
 
-
-type ScorpionTrackAccountConfigEntry = ConfigEntry[ScorpionTrackAccountCoordinator]
+type ScorpionTrackConfigEntry = ConfigEntry[
+    ScorpionTrackAccountCoordinator | ScorpionTrackShareCoordinator
+]
 
 
 class ScorpionTrackAccountCoordinator(DataUpdateCoordinator[ScorpionTrackAccountData]):
     """Coordinate authenticated ScorpionTrack account updates."""
 
+    config_entry: ScorpionTrackConfigEntry
+    account_device_id: str
+
     def __init__(
         self,
         hass: HomeAssistant,
         client: ScorpionTrackAccountClient,
-        entry: ScorpionTrackAccountConfigEntry,
+        entry: ScorpionTrackConfigEntry,
         *,
         share_client: ScorpionTrackShareClient | None = None,
     ) -> None:
         """Initialize the coordinator."""
         self.client = client
-        self.entry = entry
         self.share_client = share_client
         self.share: ScorpionTrackShare | None = None
         self.share_last_update_success: bool | None = None
@@ -81,6 +82,9 @@ class ScorpionTrackAccountCoordinator(DataUpdateCoordinator[ScorpionTrackAccount
             else unique_id_suffix
         )
         self.vehicles_by_id: dict[int, ScorpionTrackVehicleSummary] = {}
+        # Listeners must run on every refresh: scheduled transport, garage and
+        # no-alert modes are evaluated against the clock, so their state can
+        # change while the portal payload stays the same.
         super().__init__(
             hass,
             _LOGGER,
@@ -94,13 +98,25 @@ class ScorpionTrackAccountCoordinator(DataUpdateCoordinator[ScorpionTrackAccount
         )
 
     @property
-    def speed_unit(self) -> str:
-        """Return the configured unit for speed entities."""
-        account = self.data or self._account_data
-        return get_speed_unit(
-            self.entry.data,
-            self.entry.options,
-            uses_miles=account.uses_miles if account is not None else False,
+    def account_device_info(self) -> DeviceInfo:
+        """Return the device that represents the portal account."""
+        return DeviceInfo(
+            identifiers={(DOMAIN, f"account_{self.account_identifier}")},
+            entry_type=DeviceEntryType.SERVICE,
+            manufacturer=MANUFACTURER,
+            model="Portal Account",
+            name=self.data.title,
+        )
+
+    @callback
+    def async_register_account_device(self) -> None:
+        """Create the account device so vehicle devices can link to it."""
+        self.account_device_id = (
+            dr.async_get(self.hass)
+            .async_get_or_create(
+                config_entry_id=self.config_entry.entry_id, **self.account_device_info
+            )
+            .id
         )
 
     async def async_request_account_refresh(self) -> None:
@@ -112,32 +128,39 @@ class ScorpionTrackAccountCoordinator(DataUpdateCoordinator[ScorpionTrackAccount
     async def _async_update_data(self) -> ScorpionTrackAccountData:
         """Fetch updated account data."""
         now = dt_util.utcnow()
-        account_refresh_due = (
-            self._account_data is None
+        account = self._account_data
+        if (
+            account is None
             or self._last_account_refresh is None
             or self._force_account_refresh
             or now - self._last_account_refresh >= ACCOUNT_SCAN_INTERVAL
-        )
-
-        if account_refresh_due:
+        ):
             account = await self._async_refresh_account()
             self._account_data = account
             self._last_account_refresh = now
             self._force_account_refresh = False
-        else:
-            account = self._account_data
-            assert account is not None
 
         if self.share_client is not None:
-            account = await self._async_merge_share(account)
+            account = await self._async_merge_share(self.share_client, account)
 
         self.vehicles_by_id = {vehicle.id: vehicle for vehicle in account.vehicles}
+        _async_remove_stale_devices(
+            self.hass,
+            self.config_entry,
+            {
+                (DOMAIN, f"account_{self.account_identifier}"),
+                *(
+                    (DOMAIN, f"{self.account_identifier}_vehicle_{vehicle_id}")
+                    for vehicle_id in self.vehicles_by_id
+                ),
+            },
+        )
         return account
 
     async def _async_refresh_account(self) -> ScorpionTrackAccountData:
-        """Fetch portal data while preserving existing error semantics."""
+        """Fetch portal data and translate client failures."""
         try:
-            account = await self.client.async_refresh_account()
+            return await self.client.async_refresh_account()
         except ScorpionTrackConnectionError as err:
             raise UpdateFailed(
                 translation_domain=DOMAIN,
@@ -153,31 +176,46 @@ class ScorpionTrackAccountCoordinator(DataUpdateCoordinator[ScorpionTrackAccount
                 translation_domain=DOMAIN,
                 translation_key="unexpected_response",
             ) from err
-        return account
 
     async def _async_merge_share(
-        self, account: ScorpionTrackAccountData
+        self,
+        share_client: ScorpionTrackShareClient,
+        account: ScorpionTrackAccountData,
     ) -> ScorpionTrackAccountData:
         """Overlay fresher shared positions without making the share mandatory."""
-        assert self.share_client is not None
         try:
-            share = await self.share_client.async_get_share()
+            share = await share_client.async_get_share()
         except (
             ScorpionTrackShareConnectionError,
             ScorpionTrackInvalidTokenError,
             ScorpionTrackShareUnavailableError,
         ) as err:
             if self.share_last_update_success is not False:
-                _LOGGER.warning(
-                    "Optional ScorpionTrack share refresh failed (%s); using "
-                    "the latest available positions",
+                _LOGGER.info(
+                    "Optional ScorpionTrack share is unavailable (%s); using "
+                    "portal positions until it recovers",
                     type(err).__name__,
+                )
+            if not isinstance(err, ScorpionTrackShareConnectionError):
+                ir.async_create_issue(
+                    self.hass,
+                    DOMAIN,
+                    hybrid_share_issue_id(self.config_entry),
+                    is_fixable=False,
+                    severity=ir.IssueSeverity.WARNING,
+                    translation_key="hybrid_share_unavailable",
+                    translation_placeholders={"title": self.config_entry.title},
                 )
             self.share_last_update_success = False
             self.share_last_exception_type = type(err).__name__
             self.matched_share_vehicle_count = 0
             return _preserve_newer_live_positions(account, self.data)
 
+        if self.share_last_update_success is False:
+            _LOGGER.info("Optional ScorpionTrack share is available again")
+        ir.async_delete_issue(
+            self.hass, DOMAIN, hybrid_share_issue_id(self.config_entry)
+        )
         self.share = share
         self.share_last_update_success = True
         self.share_last_exception_type = None
@@ -187,6 +225,84 @@ class ScorpionTrackAccountCoordinator(DataUpdateCoordinator[ScorpionTrackAccount
         )
         self.matched_share_vehicle_count = match_count
         return replace(account, vehicles=merged_vehicles)
+
+
+class ScorpionTrackShareCoordinator(DataUpdateCoordinator[ScorpionTrackShare]):
+    """Coordinate shared-location updates."""
+
+    config_entry: ScorpionTrackConfigEntry
+
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        client: ScorpionTrackShareClient,
+        entry: ScorpionTrackConfigEntry,
+    ) -> None:
+        """Initialize the coordinator."""
+        self.client = client
+        self.vehicles_by_id: dict[int, ScorpionTrackVehicle] = {}
+        super().__init__(
+            hass,
+            _LOGGER,
+            config_entry=entry,
+            name=f"{DOMAIN}_{entry.entry_id}",
+            update_interval=SHARE_SCAN_INTERVAL,
+            always_update=False,
+        )
+
+    @override
+    async def _async_update_data(self) -> ScorpionTrackShare:
+        """Fetch updated share data."""
+        try:
+            share = await self.client.async_get_share()
+        except ScorpionTrackShareConnectionError as err:
+            raise UpdateFailed(
+                translation_domain=DOMAIN,
+                translation_key="cannot_connect",
+            ) from err
+        except ScorpionTrackInvalidTokenError as err:
+            raise ConfigEntryError(
+                translation_domain=DOMAIN,
+                translation_key="invalid_token",
+            ) from err
+        except ScorpionTrackShareUnavailableError as err:
+            raise ConfigEntryError(
+                translation_domain=DOMAIN,
+                translation_key="share_unavailable",
+            ) from err
+
+        self.vehicles_by_id = {vehicle.id: vehicle for vehicle in share.vehicles}
+        _async_remove_stale_devices(
+            self.hass,
+            self.config_entry,
+            {
+                (DOMAIN, f"share_{share.id}"),
+                *(
+                    (DOMAIN, f"{share.id}_{vehicle_id}")
+                    for vehicle_id in self.vehicles_by_id
+                ),
+            },
+        )
+        return share
+
+
+def hybrid_share_issue_id(entry: ScorpionTrackConfigEntry) -> str:
+    """Return the repair issue ID for an entry's unusable hybrid share."""
+    return f"hybrid_share_unavailable_{entry.entry_id}"
+
+
+def _async_remove_stale_devices(
+    hass: HomeAssistant,
+    entry: ScorpionTrackConfigEntry,
+    current_identifiers: set[tuple[str, str]],
+) -> None:
+    """Detach devices for vehicles no longer returned by ScorpionTrack."""
+    device_registry = dr.async_get(hass)
+    for device in dr.async_entries_for_config_entry(device_registry, entry.entry_id):
+        if device.identifiers.isdisjoint(current_identifiers):
+            device_registry.async_update_device(
+                device.id, remove_config_entry_id=entry.entry_id
+            )
 
 
 def _preserve_newer_live_positions(
@@ -206,7 +322,8 @@ def _preserve_newer_live_positions(
         )
         current_position = vehicle.position
         if (
-            previous_position is not None
+            previous_vehicle is not None
+            and previous_position is not None
             and previous_position.timestamp is not None
             and (
                 current_position is None
@@ -247,17 +364,17 @@ def _merge_share_vehicles(
     merged: list[ScorpionTrackVehicleSummary] = []
     match_count = 0
     for account_vehicle in account_vehicles:
-        share_vehicle = share_by_id.get(account_vehicle.id)
-        if share_vehicle is None:
+        matched_vehicle = share_by_id.get(account_vehicle.id)
+        if matched_vehicle is None:
             registration = _normalize_registration(account_vehicle.registration)
             if registration is not None:
-                share_vehicle = share_by_registration.get(registration)
-        if share_vehicle is None:
+                matched_vehicle = share_by_registration.get(registration)
+        if matched_vehicle is None:
             merged.append(account_vehicle)
             continue
 
         match_count += 1
-        merged.append(_merge_share_position(account_vehicle, share_vehicle))
+        merged.append(_merge_share_position(account_vehicle, matched_vehicle))
 
     return tuple(merged), match_count
 
@@ -287,7 +404,6 @@ def _merge_share_position(
         return account_vehicle
 
     base = account_position or _empty_account_position()
-    friendly_state = share_vehicle.status.replace("_", " ").title()
     if share_position.latitude is None or share_position.longitude is None:
         latitude, longitude = base.latitude, base.longitude
         address = base.address
@@ -305,13 +421,13 @@ def _merge_share_position(
         address=address,
         ignition=share_position.ignition,
         raw_state=share_vehicle.status,
-        friendly_state=friendly_state,
+        friendly_state=share_vehicle.status,
     )
     return replace(
         account_vehicle,
         position=position,
         raw_state=share_vehicle.status,
-        status=friendly_state,
+        status=share_vehicle.status,
     )
 
 

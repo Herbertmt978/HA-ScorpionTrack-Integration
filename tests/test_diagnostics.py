@@ -4,13 +4,14 @@ from __future__ import annotations
 
 import json
 from collections.abc import Mapping
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
 from homeassistant.core import HomeAssistant
+from pyscorpiontrack import ScorpionTrackConnectionError
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.scorpiontrack_portal.const import CONF_SHARE_TOKEN, DOMAIN
 from custom_components.scorpiontrack_portal.diagnostics import (
     async_get_config_entry_diagnostics,
 )
@@ -28,7 +29,7 @@ from . import setup_integration
                     "setup_type": "account",
                     "state": "loaded",
                     "version": 1,
-                    "minor_version": 1,
+                    "minor_version": 3,
                 },
                 "coordinator": {
                     "last_update_success": True,
@@ -37,13 +38,13 @@ from . import setup_integration
                     "vehicle_count": 1,
                 },
                 "entities": {
-                    "total": 53,
-                    "disabled": 0,
+                    "total": 31,
+                    "disabled": 8,
                     "by_platform": {
-                        "binary_sensor": 13,
+                        "binary_sensor": 9,
                         "button": 1,
                         "device_tracker": 1,
-                        "sensor": 36,
+                        "sensor": 18,
                         "switch": 2,
                     },
                 },
@@ -62,7 +63,7 @@ from . import setup_integration
                     "setup_type": "share",
                     "state": "loaded",
                     "version": 1,
-                    "minor_version": 1,
+                    "minor_version": 3,
                 },
                 "coordinator": {
                     "last_update_success": True,
@@ -71,12 +72,12 @@ from . import setup_integration
                     "vehicle_count": 1,
                 },
                 "entities": {
-                    "total": 13,
-                    "disabled": 0,
+                    "total": 7,
+                    "disabled": 1,
                     "by_platform": {
-                        "binary_sensor": 2,
+                        "binary_sensor": 1,
                         "device_tracker": 1,
-                        "sensor": 10,
+                        "sensor": 5,
                     },
                 },
             },
@@ -97,24 +98,6 @@ async def test_diagnostics_exact_output(
 
     assert diagnostics == expected
     json.dumps(diagnostics)
-
-
-async def test_legacy_core_share_entry_diagnostics(
-    hass: HomeAssistant,
-) -> None:
-    """A compatible share entry created by Core should be identified safely."""
-    entry = MockConfigEntry(
-        domain=DOMAIN,
-        title="Family Cars",
-        data={CONF_SHARE_TOKEN: "legacy-core-share-token"},
-        unique_id="101",
-    )
-    await setup_integration(hass, entry)
-
-    diagnostics = await async_get_config_entry_diagnostics(hass, entry)
-
-    assert diagnostics["config_entry"]["setup_type"] == "share"
-    assert "legacy-core-share-token" not in json.dumps(diagnostics)
 
 
 async def test_hybrid_diagnostics_report_share_health_without_token(
@@ -140,19 +123,20 @@ async def test_hybrid_diagnostics_report_share_health_without_token(
 async def test_diagnostics_expose_exception_type_without_message(
     hass: HomeAssistant,
     share_config_entry: MockConfigEntry,
+    client_mocks: SimpleNamespace,
 ) -> None:
     """Coordinator failures should be useful without leaking exception details."""
     await setup_integration(hass, share_config_entry)
-    coordinator = share_config_entry.runtime_data
-    coordinator.last_update_success = False
-    coordinator.last_exception = RuntimeError(
+    client_mocks.share.async_get_share.side_effect = ScorpionTrackConnectionError(
         "https://example.invalid/location-shares/secret-share-token/view"
     )
+    await share_config_entry.runtime_data.async_refresh()
 
     diagnostics = await async_get_config_entry_diagnostics(hass, share_config_entry)
     serialized = json.dumps(diagnostics)
 
-    assert diagnostics["coordinator"]["last_exception_type"] == "RuntimeError"
+    assert diagnostics["coordinator"]["last_update_success"] is False
+    assert diagnostics["coordinator"]["last_exception_type"] == "UpdateFailed"
     assert "secret-share-token" not in serialized
     assert "example.invalid" not in serialized
 

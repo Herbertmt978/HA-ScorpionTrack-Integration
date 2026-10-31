@@ -1,0 +1,87 @@
+# Self-assessment against Home Assistant's integration quality scale.
+# Hassfest does not validate this file for custom integrations.
+rules:
+  # Bronze
+  action-setup:
+    status: exempt
+    comment: This integration does not register service actions.
+  appropriate-polling: done
+  brands:
+    status: done
+    comment: Brand images are bundled in the integration's brand directory.
+  common-modules: done
+  config-flow-test-coverage: done
+  config-flow: done
+  dependency-transparency:
+    status: todo
+    comment: |
+      Shared-location links use pyscorpiontrack from PyPI. The portal-account
+      client is bundled deliberately because it relies on the private
+      ScorpionTrack web portal rather than a documented API.
+  docs-actions:
+    status: exempt
+    comment: This integration does not register service actions.
+  docs-high-level-description: done
+  docs-installation-instructions: done
+  docs-removal-instructions: done
+  entity-event-setup:
+    status: exempt
+    comment: Entities use the coordinator and subscribe to no other events.
+  entity-unique-id: done
+  has-entity-name: done
+  runtime-data: done
+  test-before-configure: done
+  test-before-setup: done
+  unique-config-entry: done
+
+  # Silver
+  action-exceptions: done
+  config-entry-unloading: done
+  docs-configuration-parameters:
+    status: exempt
+    comment: This integration has no options flow.
+  docs-installation-parameters: done
+  entity-unavailable: done
+  integration-owner: done
+  log-when-unavailable: done
+  parallel-updates: done
+  reauthentication-flow:
+    status: done
+    comment: |
+      Portal-account entries support reauthentication. Shared-location links
+      are replaced through the reconfigure flow instead.
+  test-coverage: done
+
+  # Gold
+  devices: done
+  diagnostics: done
+  discovery-update-info:
+    status: exempt
+    comment: Vehicles are reached through the ScorpionTrack cloud only.
+  discovery:
+    status: exempt
+    comment: Vehicles are reached through the ScorpionTrack cloud only.
+  docs-data-update: done
+  docs-examples: done
+  docs-known-limitations: done
+  docs-supported-devices: done
+  docs-supported-functions: done
+  docs-troubleshooting: done
+  docs-use-cases: done
+  dynamic-devices: done
+  entity-category: done
+  entity-device-class: done
+  entity-disabled-by-default: done
+  entity-translations: done
+  exception-translations: done
+  icon-translations: done
+  reconfiguration-flow: done
+  repair-issues: done
+  stale-devices: done
+
+  # Platinum
+  async-dependency:
+    status: done
+    comment: Both the bundled portal client and pyscorpiontrack use aiohttp.
+  inject-websession: done
+  strict-typing: done
