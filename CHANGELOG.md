@@ -4,7 +4,11 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
-No changes yet.
+### Changed
+
+- Add Marketplace categories (`presence_location.trackers` and `vehicles_transport`) to the manifest for the HACS default list.
+- Remove the unused `strings.json`. Custom integrations load text from `translations/en.json`, which is unchanged.
+- Add an "Add integration" My Home Assistant button to the README.
 
 ## 0.5.1 - 2026-10-31
 

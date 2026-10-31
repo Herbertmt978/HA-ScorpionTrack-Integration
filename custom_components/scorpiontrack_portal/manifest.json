@@ -1,6 +1,7 @@
 {
   "domain": "scorpiontrack_portal",
   "name": "ScorpionTrack Portal",
+  "categories": ["presence_location.trackers", "vehicles_transport"],
   "codeowners": ["@Herbertmt978"],
   "config_flow": true,
   "documentation": "https://github.com/Herbertmt978/ha-scorpiontrack-integration",

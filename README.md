@@ -13,6 +13,7 @@ Add ScorpionTrack portal accounts, alerts and controls to Home Assistant, alongs
 [![Licence: MIT](https://img.shields.io/github/license/Herbertmt978/HA-ScorpionTrack-Integration)](LICENSE)
 
 [![Open this repository in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=Herbertmt978&repository=HA-ScorpionTrack-Integration&category=integration)
+[![Add ScorpionTrack Portal to Home Assistant](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=scorpiontrack_portal)
 
 [Choose an integration](#choose-the-right-integration) | [Install](#installation) | [Upgrade](#upgrade-to-050) | [Set up](#setup) | [Examples](#use-cases-and-examples) | [Update or remove](#update-roll-back-or-remove) | [Privacy](#security-and-privacy) | [Support](#troubleshooting)
 
@@ -76,7 +77,7 @@ Treat Home Assistant backups as sensitive because they can contain integration c
 
 ### HACS custom repository
 
-Use the **Open this repository in HACS** button above, or add it manually:
+ScorpionTrack Portal is not yet in the HACS default list. Use the **Open this repository in HACS** button above, or add it manually:
 
 1. Open HACS in Home Assistant.
 2. Select `Integrations`.
@@ -183,7 +184,7 @@ To recreate Location stale, add a template binary sensor (`Settings > Devices & 
 
 After restarting Home Assistant:
 
-1. Open `Settings > Devices & services`.
+1. Use the **Add ScorpionTrack Portal to Home Assistant** button at the top of this page, or open `Settings > Devices & services`.
 2. Select `Add integration` and search for `ScorpionTrack Portal`. If the built-in integration is available, it is listed separately as `ScorpionTrack`.
 3. Complete one of the setup routes below.
 4. Confirm the config entry shows as loaded.
