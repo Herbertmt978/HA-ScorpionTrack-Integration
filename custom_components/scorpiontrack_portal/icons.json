@@ -4,6 +4,9 @@
       "armed_mode": {
         "default": "mdi:shield-car"
       },
+      "driver_module": {
+        "default": "mdi:key-chain-variant"
+      },
       "ewm": {
         "default": "mdi:motion-sensor"
       },
@@ -15,6 +18,12 @@
       },
       "ignition": {
         "default": "mdi:key-variant"
+      },
+      "immobiliser_fitted": {
+        "default": "mdi:engine-off"
+      },
+      "install_complete": {
+        "default": "mdi:check-decagram"
       },
       "no_alert_mode": {
         "default": "mdi:bell-off"
@@ -34,11 +43,26 @@
       }
     },
     "sensor": {
+      "alias": {
+        "default": "mdi:badge-account-outline"
+      },
       "backup_battery_voltage": {
         "default": "mdi:battery-medium"
       },
+      "battery_type": {
+        "default": "mdi:battery-outline"
+      },
       "battery_voltage": {
         "default": "mdi:car-battery"
+      },
+      "colour": {
+        "default": "mdi:palette-outline"
+      },
+      "description": {
+        "default": "mdi:text-box-outline"
+      },
+      "fuel_type": {
+        "default": "mdi:gas-station-outline"
       },
       "gps_antenna_voltage": {
         "default": "mdi:antenna"
@@ -52,6 +76,12 @@
       "heading": {
         "default": "mdi:compass"
       },
+      "installed": {
+        "default": "mdi:calendar-star"
+      },
+      "last_refreshed": {
+        "default": "mdi:update"
+      },
       "last_reported": {
         "default": "mdi:clock-outline"
       },
@@ -64,14 +94,41 @@
       "latest_alert_time": {
         "default": "mdi:clock-alert-outline"
       },
+      "location": {
+        "default": "mdi:map-marker"
+      },
+      "make": {
+        "default": "mdi:factory"
+      },
+      "model": {
+        "default": "mdi:car-side"
+      },
       "mot_due": {
         "default": "mdi:calendar-check"
       },
       "odometer": {
         "default": "mdi:counter"
       },
+      "pending_command_count": {
+        "default": "mdi:progress-clock"
+      },
+      "portal_state": {
+        "default": "mdi:code-braces"
+      },
+      "registration": {
+        "default": "mdi:card-text-outline"
+      },
+      "share_created": {
+        "default": "mdi:calendar-plus"
+      },
       "share_expires": {
         "default": "mdi:calendar-clock"
+      },
+      "share_title": {
+        "default": "mdi:share-variant"
+      },
+      "shared_by": {
+        "default": "mdi:account"
       },
       "status": {
         "default": "mdi:car-info",
@@ -90,8 +147,23 @@
       "unit_last_checked_in": {
         "default": "mdi:router-wireless"
       },
+      "unit_make": {
+        "default": "mdi:developer-board"
+      },
+      "unit_model": {
+        "default": "mdi:chip"
+      },
       "unread_alerts": {
         "default": "mdi:bell-badge"
+      },
+      "user_id": {
+        "default": "mdi:identifier"
+      },
+      "vehicle_count": {
+        "default": "mdi:car-multiple"
+      },
+      "vehicle_type": {
+        "default": "mdi:car-cog"
       }
     },
     "switch": {

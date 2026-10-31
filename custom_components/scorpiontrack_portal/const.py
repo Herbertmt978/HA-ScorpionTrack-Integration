@@ -35,6 +35,9 @@ SHARE_SCAN_INTERVAL = timedelta(minutes=2)
 # drift on a parked vehicle from reading as movement.
 MOVING_SPEED_THRESHOLD_KMH = 3.0
 
+# A vehicle's location is stale once its last position is this old.
+STALE_POSITION_AFTER = timedelta(hours=24)
+
 PLATFORMS: tuple[Platform, ...] = (
     Platform.SENSOR,
     Platform.BINARY_SENSOR,

@@ -49,6 +49,56 @@
     'state': 'off',
   })
 # ---
+# name: test_entity_snapshots[account_config_entry-binary_sensor][binary_sensor.golf_r_driver_module_fitted-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'binary_sensor',
+    'entity_category': <EntityCategory.DIAGNOSTIC: 'diagnostic'>,
+    'entity_id': 'binary_sensor.golf_r_driver_module_fitted',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': 'Driver module fitted',
+    'options': dict({
+    }),
+    'original_device_class': None,
+    'original_icon': None,
+    'original_name': 'Driver module fitted',
+    'platform': 'scorpiontrack_portal',
+    'previous_unique_id': None,
+    'suggested_object_id': None,
+    'supported_features': 0,
+    'translation_key': 'driver_module',
+    'unique_id': '42_2001_driver_module_v2',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_entity_snapshots[account_config_entry-binary_sensor][binary_sensor.golf_r_driver_module_fitted-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Golf R Driver module fitted',
+    }),
+    'context': <ANY>,
+    'entity_id': 'binary_sensor.golf_r_driver_module_fitted',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'on',
+  })
+# ---
 # name: test_entity_snapshots[account_config_entry-binary_sensor][binary_sensor.golf_r_engine-entry]
   EntityRegistryEntrySnapshot({
     'aliases': list([
@@ -298,6 +348,157 @@
     'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'on',
+  })
+# ---
+# name: test_entity_snapshots[account_config_entry-binary_sensor][binary_sensor.golf_r_immobiliser_fitted-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'binary_sensor',
+    'entity_category': <EntityCategory.DIAGNOSTIC: 'diagnostic'>,
+    'entity_id': 'binary_sensor.golf_r_immobiliser_fitted',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': 'Immobiliser fitted',
+    'options': dict({
+    }),
+    'original_device_class': None,
+    'original_icon': None,
+    'original_name': 'Immobiliser fitted',
+    'platform': 'scorpiontrack_portal',
+    'previous_unique_id': None,
+    'suggested_object_id': None,
+    'supported_features': 0,
+    'translation_key': 'immobiliser_fitted',
+    'unique_id': '42_2001_immobiliser_fitted_v2',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_entity_snapshots[account_config_entry-binary_sensor][binary_sensor.golf_r_immobiliser_fitted-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Golf R Immobiliser fitted',
+    }),
+    'context': <ANY>,
+    'entity_id': 'binary_sensor.golf_r_immobiliser_fitted',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'off',
+  })
+# ---
+# name: test_entity_snapshots[account_config_entry-binary_sensor][binary_sensor.golf_r_installation_complete-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'binary_sensor',
+    'entity_category': <EntityCategory.DIAGNOSTIC: 'diagnostic'>,
+    'entity_id': 'binary_sensor.golf_r_installation_complete',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': 'Installation complete',
+    'options': dict({
+    }),
+    'original_device_class': None,
+    'original_icon': None,
+    'original_name': 'Installation complete',
+    'platform': 'scorpiontrack_portal',
+    'previous_unique_id': None,
+    'suggested_object_id': None,
+    'supported_features': 0,
+    'translation_key': 'install_complete',
+    'unique_id': '42_2001_install_complete_v2',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_entity_snapshots[account_config_entry-binary_sensor][binary_sensor.golf_r_installation_complete-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Golf R Installation complete',
+    }),
+    'context': <ANY>,
+    'entity_id': 'binary_sensor.golf_r_installation_complete',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'on',
+  })
+# ---
+# name: test_entity_snapshots[account_config_entry-binary_sensor][binary_sensor.golf_r_location_stale-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'binary_sensor',
+    'entity_category': <EntityCategory.DIAGNOSTIC: 'diagnostic'>,
+    'entity_id': 'binary_sensor.golf_r_location_stale',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': 'Location stale',
+    'options': dict({
+    }),
+    'original_device_class': <BinarySensorDeviceClass.PROBLEM: 'problem'>,
+    'original_icon': None,
+    'original_name': 'Location stale',
+    'platform': 'scorpiontrack_portal',
+    'previous_unique_id': None,
+    'suggested_object_id': None,
+    'supported_features': 0,
+    'translation_key': 'location_stale',
+    'unique_id': '42_2001_location_stale_v2',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_entity_snapshots[account_config_entry-binary_sensor][binary_sensor.golf_r_location_stale-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.DEVICE_CLASS: 'device_class'>: 'problem',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Golf R Location stale',
+    }),
+    'context': <ANY>,
+    'entity_id': 'binary_sensor.golf_r_location_stale',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'off',
   })
 # ---
 # name: test_entity_snapshots[account_config_entry-binary_sensor][binary_sensor.golf_r_no_alert_mode-entry]
@@ -560,6 +761,56 @@
     'state': 'not_home',
   })
 # ---
+# name: test_entity_snapshots[account_config_entry-sensor][sensor.golf_r_alias-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'sensor',
+    'entity_category': <EntityCategory.DIAGNOSTIC: 'diagnostic'>,
+    'entity_id': 'sensor.golf_r_alias',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': 'Alias',
+    'options': dict({
+    }),
+    'original_device_class': None,
+    'original_icon': None,
+    'original_name': 'Alias',
+    'platform': 'scorpiontrack_portal',
+    'previous_unique_id': None,
+    'suggested_object_id': None,
+    'supported_features': 0,
+    'translation_key': 'alias',
+    'unique_id': '42_2001_alias_v2',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_entity_snapshots[account_config_entry-sensor][sensor.golf_r_alias-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Golf R Alias',
+    }),
+    'context': <ANY>,
+    'entity_id': 'sensor.golf_r_alias',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'Golf R',
+  })
+# ---
 # name: test_entity_snapshots[account_config_entry-sensor][sensor.golf_r_backup_battery_voltage-entry]
   EntityRegistryEntrySnapshot({
     'aliases': list([
@@ -618,6 +869,56 @@
     'state': '4.1',
   })
 # ---
+# name: test_entity_snapshots[account_config_entry-sensor][sensor.golf_r_battery_type-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'sensor',
+    'entity_category': <EntityCategory.DIAGNOSTIC: 'diagnostic'>,
+    'entity_id': 'sensor.golf_r_battery_type',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': 'Battery type',
+    'options': dict({
+    }),
+    'original_device_class': None,
+    'original_icon': None,
+    'original_name': 'Battery type',
+    'platform': 'scorpiontrack_portal',
+    'previous_unique_id': None,
+    'suggested_object_id': None,
+    'supported_features': 0,
+    'translation_key': 'battery_type',
+    'unique_id': '42_2001_battery_type_v2',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_entity_snapshots[account_config_entry-sensor][sensor.golf_r_battery_type-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Golf R Battery type',
+    }),
+    'context': <ANY>,
+    'entity_id': 'sensor.golf_r_battery_type',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': '12V lead-acid',
+  })
+# ---
 # name: test_entity_snapshots[account_config_entry-sensor][sensor.golf_r_battery_voltage-entry]
   EntityRegistryEntrySnapshot({
     'aliases': list([
@@ -674,6 +975,156 @@
     'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '12.64',
+  })
+# ---
+# name: test_entity_snapshots[account_config_entry-sensor][sensor.golf_r_colour-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'sensor',
+    'entity_category': <EntityCategory.DIAGNOSTIC: 'diagnostic'>,
+    'entity_id': 'sensor.golf_r_colour',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': 'Colour',
+    'options': dict({
+    }),
+    'original_device_class': None,
+    'original_icon': None,
+    'original_name': 'Colour',
+    'platform': 'scorpiontrack_portal',
+    'previous_unique_id': None,
+    'suggested_object_id': None,
+    'supported_features': 0,
+    'translation_key': 'colour',
+    'unique_id': '42_2001_colour_v2',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_entity_snapshots[account_config_entry-sensor][sensor.golf_r_colour-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Golf R Colour',
+    }),
+    'context': <ANY>,
+    'entity_id': 'sensor.golf_r_colour',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'Lapiz Blue',
+  })
+# ---
+# name: test_entity_snapshots[account_config_entry-sensor][sensor.golf_r_description-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'sensor',
+    'entity_category': <EntityCategory.DIAGNOSTIC: 'diagnostic'>,
+    'entity_id': 'sensor.golf_r_description',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': 'Description',
+    'options': dict({
+    }),
+    'original_device_class': None,
+    'original_icon': None,
+    'original_name': 'Description',
+    'platform': 'scorpiontrack_portal',
+    'previous_unique_id': None,
+    'suggested_object_id': None,
+    'supported_features': 0,
+    'translation_key': 'description',
+    'unique_id': '42_2001_description_v2',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_entity_snapshots[account_config_entry-sensor][sensor.golf_r_description-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Golf R Description',
+    }),
+    'context': <ANY>,
+    'entity_id': 'sensor.golf_r_description',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'Weekend car',
+  })
+# ---
+# name: test_entity_snapshots[account_config_entry-sensor][sensor.golf_r_fuel_type-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'sensor',
+    'entity_category': <EntityCategory.DIAGNOSTIC: 'diagnostic'>,
+    'entity_id': 'sensor.golf_r_fuel_type',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': 'Fuel type',
+    'options': dict({
+    }),
+    'original_device_class': None,
+    'original_icon': None,
+    'original_name': 'Fuel type',
+    'platform': 'scorpiontrack_portal',
+    'previous_unique_id': None,
+    'suggested_object_id': None,
+    'supported_features': 0,
+    'translation_key': 'fuel_type',
+    'unique_id': '42_2001_fuel_type_v2',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_entity_snapshots[account_config_entry-sensor][sensor.golf_r_fuel_type-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Golf R Fuel type',
+    }),
+    'context': <ANY>,
+    'entity_id': 'sensor.golf_r_fuel_type',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'Petrol',
   })
 # ---
 # name: test_entity_snapshots[account_config_entry-sensor][sensor.golf_r_gps_antenna_current-entry]
@@ -958,6 +1409,57 @@
     'state': '182.0',
   })
 # ---
+# name: test_entity_snapshots[account_config_entry-sensor][sensor.golf_r_installed-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'sensor',
+    'entity_category': <EntityCategory.DIAGNOSTIC: 'diagnostic'>,
+    'entity_id': 'sensor.golf_r_installed',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': 'Installed',
+    'options': dict({
+    }),
+    'original_device_class': <SensorDeviceClass.TIMESTAMP: 'timestamp'>,
+    'original_icon': None,
+    'original_name': 'Installed',
+    'platform': 'scorpiontrack_portal',
+    'previous_unique_id': None,
+    'suggested_object_id': None,
+    'supported_features': 0,
+    'translation_key': 'installed',
+    'unique_id': '42_2001_installed_v2',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_entity_snapshots[account_config_entry-sensor][sensor.golf_r_installed-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.DEVICE_CLASS: 'device_class'>: 'timestamp',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Golf R Installed',
+    }),
+    'context': <ANY>,
+    'entity_id': 'sensor.golf_r_installed',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': '2024-05-20T09:30:00+00:00',
+  })
+# ---
 # name: test_entity_snapshots[account_config_entry-sensor][sensor.golf_r_last_reported-entry]
   EntityRegistryEntrySnapshot({
     'aliases': list([
@@ -1058,6 +1560,156 @@
     'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '2026-09-01',
+  })
+# ---
+# name: test_entity_snapshots[account_config_entry-sensor][sensor.golf_r_location-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'sensor',
+    'entity_category': None,
+    'entity_id': 'sensor.golf_r_location',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': 'Location',
+    'options': dict({
+    }),
+    'original_device_class': None,
+    'original_icon': None,
+    'original_name': 'Location',
+    'platform': 'scorpiontrack_portal',
+    'previous_unique_id': None,
+    'suggested_object_id': None,
+    'supported_features': 0,
+    'translation_key': 'location',
+    'unique_id': '42_2001_location_v2',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_entity_snapshots[account_config_entry-sensor][sensor.golf_r_location-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Golf R Location',
+    }),
+    'context': <ANY>,
+    'entity_id': 'sensor.golf_r_location',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'Westminster, London',
+  })
+# ---
+# name: test_entity_snapshots[account_config_entry-sensor][sensor.golf_r_make-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'sensor',
+    'entity_category': <EntityCategory.DIAGNOSTIC: 'diagnostic'>,
+    'entity_id': 'sensor.golf_r_make',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': 'Make',
+    'options': dict({
+    }),
+    'original_device_class': None,
+    'original_icon': None,
+    'original_name': 'Make',
+    'platform': 'scorpiontrack_portal',
+    'previous_unique_id': None,
+    'suggested_object_id': None,
+    'supported_features': 0,
+    'translation_key': 'make',
+    'unique_id': '42_2001_make_v2',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_entity_snapshots[account_config_entry-sensor][sensor.golf_r_make-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Golf R Make',
+    }),
+    'context': <ANY>,
+    'entity_id': 'sensor.golf_r_make',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'Volkswagen',
+  })
+# ---
+# name: test_entity_snapshots[account_config_entry-sensor][sensor.golf_r_model-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'sensor',
+    'entity_category': <EntityCategory.DIAGNOSTIC: 'diagnostic'>,
+    'entity_id': 'sensor.golf_r_model',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': 'Model',
+    'options': dict({
+    }),
+    'original_device_class': None,
+    'original_icon': None,
+    'original_name': 'Model',
+    'platform': 'scorpiontrack_portal',
+    'previous_unique_id': None,
+    'suggested_object_id': None,
+    'supported_features': 0,
+    'translation_key': 'model',
+    'unique_id': '42_2001_model_v2',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_entity_snapshots[account_config_entry-sensor][sensor.golf_r_model-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Golf R Model',
+    }),
+    'context': <ANY>,
+    'entity_id': 'sensor.golf_r_model',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'Golf R',
   })
 # ---
 # name: test_entity_snapshots[account_config_entry-sensor][sensor.golf_r_mot_due-entry]
@@ -1170,6 +1822,159 @@
     'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '7671.20019088523',
+  })
+# ---
+# name: test_entity_snapshots[account_config_entry-sensor][sensor.golf_r_pending_command_count-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': dict({
+      <SensorEntityCapabilityAttribute.STATE_CLASS: 'state_class'>: <SensorStateClass.MEASUREMENT: 'measurement'>,
+    }),
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'sensor',
+    'entity_category': <EntityCategory.DIAGNOSTIC: 'diagnostic'>,
+    'entity_id': 'sensor.golf_r_pending_command_count',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': 'Pending command count',
+    'options': dict({
+    }),
+    'original_device_class': None,
+    'original_icon': None,
+    'original_name': 'Pending command count',
+    'platform': 'scorpiontrack_portal',
+    'previous_unique_id': None,
+    'suggested_object_id': None,
+    'supported_features': 0,
+    'translation_key': 'pending_command_count',
+    'unique_id': '42_2001_pending_command_count_v2',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_entity_snapshots[account_config_entry-sensor][sensor.golf_r_pending_command_count-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Golf R Pending command count',
+      <SensorEntityCapabilityAttribute.STATE_CLASS: 'state_class'>: <SensorStateClass.MEASUREMENT: 'measurement'>,
+    }),
+    'context': <ANY>,
+    'entity_id': 'sensor.golf_r_pending_command_count',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': '1',
+  })
+# ---
+# name: test_entity_snapshots[account_config_entry-sensor][sensor.golf_r_portal_state-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'sensor',
+    'entity_category': <EntityCategory.DIAGNOSTIC: 'diagnostic'>,
+    'entity_id': 'sensor.golf_r_portal_state',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': 'Portal state',
+    'options': dict({
+    }),
+    'original_device_class': None,
+    'original_icon': None,
+    'original_name': 'Portal state',
+    'platform': 'scorpiontrack_portal',
+    'previous_unique_id': None,
+    'suggested_object_id': None,
+    'supported_features': 0,
+    'translation_key': 'portal_state',
+    'unique_id': '42_2001_portal_state_v2',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_entity_snapshots[account_config_entry-sensor][sensor.golf_r_portal_state-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Golf R Portal state',
+    }),
+    'context': <ANY>,
+    'entity_id': 'sensor.golf_r_portal_state',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'moving',
+  })
+# ---
+# name: test_entity_snapshots[account_config_entry-sensor][sensor.golf_r_registration-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'sensor',
+    'entity_category': <EntityCategory.DIAGNOSTIC: 'diagnostic'>,
+    'entity_id': 'sensor.golf_r_registration',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': 'Registration',
+    'options': dict({
+    }),
+    'original_device_class': None,
+    'original_icon': None,
+    'original_name': 'Registration',
+    'platform': 'scorpiontrack_portal',
+    'previous_unique_id': None,
+    'suggested_object_id': None,
+    'supported_features': 0,
+    'translation_key': 'registration',
+    'unique_id': '42_2001_registration_v2',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_entity_snapshots[account_config_entry-sensor][sensor.golf_r_registration-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Golf R Registration',
+    }),
+    'context': <ANY>,
+    'entity_id': 'sensor.golf_r_registration',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'AB12 CDE',
   })
 # ---
 # name: test_entity_snapshots[account_config_entry-sensor][sensor.golf_r_speed-entry]
@@ -1403,6 +2208,207 @@
     'state': '2026-10-31T11:50:00+00:00',
   })
 # ---
+# name: test_entity_snapshots[account_config_entry-sensor][sensor.golf_r_unit_make-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'sensor',
+    'entity_category': <EntityCategory.DIAGNOSTIC: 'diagnostic'>,
+    'entity_id': 'sensor.golf_r_unit_make',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': 'Unit make',
+    'options': dict({
+    }),
+    'original_device_class': None,
+    'original_icon': None,
+    'original_name': 'Unit make',
+    'platform': 'scorpiontrack_portal',
+    'previous_unique_id': None,
+    'suggested_object_id': None,
+    'supported_features': 0,
+    'translation_key': 'unit_make',
+    'unique_id': '42_2001_unit_make_v2',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_entity_snapshots[account_config_entry-sensor][sensor.golf_r_unit_make-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Golf R Unit make',
+    }),
+    'context': <ANY>,
+    'entity_id': 'sensor.golf_r_unit_make',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'ScorpionTrack',
+  })
+# ---
+# name: test_entity_snapshots[account_config_entry-sensor][sensor.golf_r_unit_model-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'sensor',
+    'entity_category': <EntityCategory.DIAGNOSTIC: 'diagnostic'>,
+    'entity_id': 'sensor.golf_r_unit_model',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': 'Unit model',
+    'options': dict({
+    }),
+    'original_device_class': None,
+    'original_icon': None,
+    'original_name': 'Unit model',
+    'platform': 'scorpiontrack_portal',
+    'previous_unique_id': None,
+    'suggested_object_id': None,
+    'supported_features': 0,
+    'translation_key': 'unit_model',
+    'unique_id': '42_2001_unit_model_v2',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_entity_snapshots[account_config_entry-sensor][sensor.golf_r_unit_model-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Golf R Unit model',
+    }),
+    'context': <ANY>,
+    'entity_id': 'sensor.golf_r_unit_model',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'S5',
+  })
+# ---
+# name: test_entity_snapshots[account_config_entry-sensor][sensor.golf_r_vehicle_type-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'sensor',
+    'entity_category': <EntityCategory.DIAGNOSTIC: 'diagnostic'>,
+    'entity_id': 'sensor.golf_r_vehicle_type',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': 'Vehicle type',
+    'options': dict({
+    }),
+    'original_device_class': None,
+    'original_icon': None,
+    'original_name': 'Vehicle type',
+    'platform': 'scorpiontrack_portal',
+    'previous_unique_id': None,
+    'suggested_object_id': None,
+    'supported_features': 0,
+    'translation_key': 'vehicle_type',
+    'unique_id': '42_2001_vehicle_type_v2',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_entity_snapshots[account_config_entry-sensor][sensor.golf_r_vehicle_type-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Golf R Vehicle type',
+    }),
+    'context': <ANY>,
+    'entity_id': 'sensor.golf_r_vehicle_type',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'Car',
+  })
+# ---
+# name: test_entity_snapshots[account_config_entry-sensor][sensor.scorpiontrack_owner_last_refreshed-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'sensor',
+    'entity_category': <EntityCategory.DIAGNOSTIC: 'diagnostic'>,
+    'entity_id': 'sensor.scorpiontrack_owner_last_refreshed',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': 'Last refreshed',
+    'options': dict({
+    }),
+    'original_device_class': <SensorDeviceClass.TIMESTAMP: 'timestamp'>,
+    'original_icon': None,
+    'original_name': 'Last refreshed',
+    'platform': 'scorpiontrack_portal',
+    'previous_unique_id': None,
+    'suggested_object_id': None,
+    'supported_features': 0,
+    'translation_key': 'last_refreshed',
+    'unique_id': '42_last_refreshed_v2',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_entity_snapshots[account_config_entry-sensor][sensor.scorpiontrack_owner_last_refreshed-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.DEVICE_CLASS: 'device_class'>: 'timestamp',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'ScorpionTrack (Owner) Last refreshed',
+    }),
+    'context': <ANY>,
+    'entity_id': 'sensor.scorpiontrack_owner_last_refreshed',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': '2026-10-31T12:00:00+00:00',
+  })
+# ---
 # name: test_entity_snapshots[account_config_entry-sensor][sensor.scorpiontrack_owner_latest_alert-entry]
   EntityRegistryEntrySnapshot({
     'aliases': list([
@@ -1557,6 +2563,109 @@
     'state': '1',
   })
 # ---
+# name: test_entity_snapshots[account_config_entry-sensor][sensor.scorpiontrack_owner_user_id-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'sensor',
+    'entity_category': <EntityCategory.DIAGNOSTIC: 'diagnostic'>,
+    'entity_id': 'sensor.scorpiontrack_owner_user_id',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': 'User ID',
+    'options': dict({
+    }),
+    'original_device_class': None,
+    'original_icon': None,
+    'original_name': 'User ID',
+    'platform': 'scorpiontrack_portal',
+    'previous_unique_id': None,
+    'suggested_object_id': None,
+    'supported_features': 0,
+    'translation_key': 'user_id',
+    'unique_id': '42_user_id_v2',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_entity_snapshots[account_config_entry-sensor][sensor.scorpiontrack_owner_user_id-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'ScorpionTrack (Owner) User ID',
+    }),
+    'context': <ANY>,
+    'entity_id': 'sensor.scorpiontrack_owner_user_id',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': '42',
+  })
+# ---
+# name: test_entity_snapshots[account_config_entry-sensor][sensor.scorpiontrack_owner_vehicle_count-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': dict({
+      <SensorEntityCapabilityAttribute.STATE_CLASS: 'state_class'>: <SensorStateClass.MEASUREMENT: 'measurement'>,
+    }),
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'sensor',
+    'entity_category': <EntityCategory.DIAGNOSTIC: 'diagnostic'>,
+    'entity_id': 'sensor.scorpiontrack_owner_vehicle_count',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': 'Vehicle count',
+    'options': dict({
+    }),
+    'original_device_class': None,
+    'original_icon': None,
+    'original_name': 'Vehicle count',
+    'platform': 'scorpiontrack_portal',
+    'previous_unique_id': None,
+    'suggested_object_id': None,
+    'supported_features': 0,
+    'translation_key': 'vehicle_count',
+    'unique_id': '42_vehicle_count_v2',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_entity_snapshots[account_config_entry-sensor][sensor.scorpiontrack_owner_vehicle_count-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'ScorpionTrack (Owner) Vehicle count',
+      <SensorEntityCapabilityAttribute.STATE_CLASS: 'state_class'>: <SensorStateClass.MEASUREMENT: 'measurement'>,
+    }),
+    'context': <ANY>,
+    'entity_id': 'sensor.scorpiontrack_owner_vehicle_count',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': '1',
+  })
+# ---
 # name: test_entity_snapshots[account_config_entry-switch][switch.golf_r_privacy_mode-entry]
   EntityRegistryEntrySnapshot({
     'aliases': list([
@@ -1705,6 +2814,57 @@
     'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'on',
+  })
+# ---
+# name: test_entity_snapshots[share_config_entry-binary_sensor][binary_sensor.ab12_cde_location_stale-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'binary_sensor',
+    'entity_category': <EntityCategory.DIAGNOSTIC: 'diagnostic'>,
+    'entity_id': 'binary_sensor.ab12_cde_location_stale',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': 'Location stale',
+    'options': dict({
+    }),
+    'original_device_class': <BinarySensorDeviceClass.PROBLEM: 'problem'>,
+    'original_icon': None,
+    'original_name': 'Location stale',
+    'platform': 'scorpiontrack_portal',
+    'previous_unique_id': None,
+    'suggested_object_id': None,
+    'supported_features': 0,
+    'translation_key': 'location_stale',
+    'unique_id': '101_2001_location_stale_v2',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_entity_snapshots[share_config_entry-binary_sensor][binary_sensor.ab12_cde_location_stale-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.DEVICE_CLASS: 'device_class'>: 'problem',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'AB12 CDE Location stale',
+    }),
+    'context': <ANY>,
+    'entity_id': 'binary_sensor.ab12_cde_location_stale',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'off',
   })
 # ---
 # name: test_entity_snapshots[share_config_entry-device_tracker][device_tracker.ab12_cde-entry]
@@ -1874,6 +3034,107 @@
     'state': '2026-10-31T11:55:00+00:00',
   })
 # ---
+# name: test_entity_snapshots[share_config_entry-sensor][sensor.ab12_cde_location-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'sensor',
+    'entity_category': None,
+    'entity_id': 'sensor.ab12_cde_location',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': 'Location',
+    'options': dict({
+    }),
+    'original_device_class': None,
+    'original_icon': None,
+    'original_name': 'Location',
+    'platform': 'scorpiontrack_portal',
+    'previous_unique_id': None,
+    'suggested_object_id': None,
+    'supported_features': 0,
+    'translation_key': 'location',
+    'unique_id': '101_2001_location_v2',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_entity_snapshots[share_config_entry-sensor][sensor.ab12_cde_location-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'AB12 CDE Location',
+    }),
+    'context': <ANY>,
+    'entity_id': 'sensor.ab12_cde_location',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'Westminster, London',
+  })
+# ---
+# name: test_entity_snapshots[share_config_entry-sensor][sensor.ab12_cde_share_expires-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'sensor',
+    'entity_category': <EntityCategory.DIAGNOSTIC: 'diagnostic'>,
+    'entity_id': 'sensor.ab12_cde_share_expires',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': 'Share expires',
+    'options': dict({
+    }),
+    'original_device_class': <SensorDeviceClass.TIMESTAMP: 'timestamp'>,
+    'original_icon': None,
+    'original_name': 'Share expires',
+    'platform': 'scorpiontrack_portal',
+    'previous_unique_id': None,
+    'suggested_object_id': None,
+    'supported_features': 0,
+    'translation_key': 'share_expires',
+    'unique_id': '101_2001_share_expires_v2',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_entity_snapshots[share_config_entry-sensor][sensor.ab12_cde_share_expires-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.DEVICE_CLASS: 'device_class'>: 'timestamp',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'AB12 CDE Share expires',
+    }),
+    'context': <ANY>,
+    'entity_id': 'sensor.ab12_cde_share_expires',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': '2026-11-28T12:00:00+00:00',
+  })
+# ---
 # name: test_entity_snapshots[share_config_entry-sensor][sensor.ab12_cde_speed-entry]
   EntityRegistryEntrySnapshot({
     'aliases': list([
@@ -1997,6 +3258,57 @@
     'state': 'moving',
   })
 # ---
+# name: test_entity_snapshots[share_config_entry-sensor][sensor.family_cars_share_created-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'sensor',
+    'entity_category': <EntityCategory.DIAGNOSTIC: 'diagnostic'>,
+    'entity_id': 'sensor.family_cars_share_created',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': 'Share created',
+    'options': dict({
+    }),
+    'original_device_class': <SensorDeviceClass.TIMESTAMP: 'timestamp'>,
+    'original_icon': None,
+    'original_name': 'Share created',
+    'platform': 'scorpiontrack_portal',
+    'previous_unique_id': None,
+    'suggested_object_id': None,
+    'supported_features': 0,
+    'translation_key': 'share_created',
+    'unique_id': '101_share_share_created_v2',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_entity_snapshots[share_config_entry-sensor][sensor.family_cars_share_created-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.DEVICE_CLASS: 'device_class'>: 'timestamp',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Family Cars Share created',
+    }),
+    'context': <ANY>,
+    'entity_id': 'sensor.family_cars_share_created',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': '2026-10-28T12:00:00+00:00',
+  })
+# ---
 # name: test_entity_snapshots[share_config_entry-sensor][sensor.family_cars_share_expires-entry]
   EntityRegistryEntrySnapshot({
     'aliases': list([
@@ -2046,5 +3358,105 @@
     'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '2026-11-28T12:00:00+00:00',
+  })
+# ---
+# name: test_entity_snapshots[share_config_entry-sensor][sensor.family_cars_share_title-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'sensor',
+    'entity_category': <EntityCategory.DIAGNOSTIC: 'diagnostic'>,
+    'entity_id': 'sensor.family_cars_share_title',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': 'Share title',
+    'options': dict({
+    }),
+    'original_device_class': None,
+    'original_icon': None,
+    'original_name': 'Share title',
+    'platform': 'scorpiontrack_portal',
+    'previous_unique_id': None,
+    'suggested_object_id': None,
+    'supported_features': 0,
+    'translation_key': 'share_title',
+    'unique_id': '101_share_share_title_v2',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_entity_snapshots[share_config_entry-sensor][sensor.family_cars_share_title-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Family Cars Share title',
+    }),
+    'context': <ANY>,
+    'entity_id': 'sensor.family_cars_share_title',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'Family Cars',
+  })
+# ---
+# name: test_entity_snapshots[share_config_entry-sensor][sensor.family_cars_shared_by-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'sensor',
+    'entity_category': <EntityCategory.DIAGNOSTIC: 'diagnostic'>,
+    'entity_id': 'sensor.family_cars_shared_by',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': 'Shared by',
+    'options': dict({
+    }),
+    'original_device_class': None,
+    'original_icon': None,
+    'original_name': 'Shared by',
+    'platform': 'scorpiontrack_portal',
+    'previous_unique_id': None,
+    'suggested_object_id': None,
+    'supported_features': 0,
+    'translation_key': 'shared_by',
+    'unique_id': '101_share_shared_by_v2',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_entity_snapshots[share_config_entry-sensor][sensor.family_cars_shared_by-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Family Cars Shared by',
+    }),
+    'context': <ANY>,
+    'entity_id': 'sensor.family_cars_shared_by',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'ScorpionTrack User',
   })
 # ---

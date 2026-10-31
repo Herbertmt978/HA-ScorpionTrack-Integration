@@ -15,7 +15,7 @@ Add ScorpionTrack portal accounts, alerts and controls to Home Assistant, alongs
 [![Open this repository in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=Herbertmt978&repository=HA-ScorpionTrack-Integration&category=integration)
 [![Add ScorpionTrack Portal to Home Assistant](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=scorpiontrack_portal)
 
-[Choose an integration](#choose-the-right-integration) | [Install](#installation) | [Upgrade](#upgrade-to-050) | [Set up](#setup) | [Examples](#use-cases-and-examples) | [Update or remove](#update-roll-back-or-remove) | [Privacy](#security-and-privacy) | [Support](#troubleshooting)
+[Choose an integration](#choose-the-right-integration) | [Install](#installation) | [Upgrade](#upgrade-to-060) | [Set up](#setup) | [Examples](#use-cases-and-examples) | [Update or remove](#update-roll-back-or-remove) | [Privacy](#security-and-privacy) | [Support](#troubleshooting)
 
 </div>
 
@@ -115,19 +115,43 @@ Shared-link entries can instead move to the built-in `ScorpionTrack` integration
 
 If you updated before deleting the old entries, they are left under the built-in integration's domain. Portal-account entries cannot load there, because the built-in integration supports shared-location links only. Delete those entries, check that `custom_components/scorpiontrack` has gone, restart, and add them again under `ScorpionTrack Portal`. Do not edit Home Assistant's `.storage` files manually.
 
+## Upgrade to 0.6.0
+
+Version 0.6.0 brings back the entities that 0.5.0 removed, disabled, so you can turn on any you want. They are new entities, so they start disabled whichever version you update from, and nothing you use today changes. Entity attributes stay removed.
+
+- **From 0.5.x:** update through HACS and restart. The entities appear, disabled, on each device. Each normally gets the entity ID it had in 0.4.0, such as `sensor.golf_r_registration`. If something else now uses that ID, such as a template you made to replace it, Home Assistant adds a suffix such as `_2`. Entity IDs, names and areas you customised in 0.4.0 are not restored.
+- **From 0.4.0:** read [Upgrade to 0.5.0](#upgrade-to-050) first, because every 0.5.0 change still applies. The old entities are removed during the update and the new ones appear, disabled, with the same default entity IDs. Enable the ones your automations and dashboards use.
+- **New setups:** the entities are added disabled.
+
+To enable one entity, open its device from `Settings > Devices & services > ScorpionTrack Portal`, select the line saying that entities are not shown, select the entity, open its settings, turn on `Enabled` and select `Update`. To enable several, open `Settings > Devices & services > Entities`, search for the integration, show disabled entities, select them and choose `Enable selected`. Home Assistant reloads the entry about 30 seconds later, and the entities then report values.
+
+| Device | Entities available again, disabled by default |
+| --- | --- |
+| Portal account | Vehicle count, Last refreshed, User ID |
+| Portal-account vehicle | Location, Location stale, Portal state, Installed, Registration, Description, Alias, Colour, Fuel type, Battery type, Make, Model, Vehicle type, Unit make, Unit model, Pending command count, Driver module fitted, Installation complete, Immobiliser fitted |
+| Location share | Share title, Shared by, Share created |
+| Shared-location vehicle | Location, Location stale, Share expires |
+
+Differences from 0.4.0:
+
+- Every entity except Location is diagnostic, so it appears under `Diagnostic` on the device page.
+- Location stale uses the problem device class in both modes, shown as `Problem` or `OK`. It turns on when the last position is 24 hours old or more, or when there is none.
+- Location shows the address, or the coordinates when there is no address, as before. Text longer than 255 characters is cut short.
+- None of them has attributes.
+
 ## Upgrade to 0.5.0
 
 Version 0.5.0 adopts Home Assistant Core's conventions for entities. Automations, scripts, templates and dashboards that use removed attributes or entities need updating. Create a backup before you update.
 
 - **From 0.3.x:** follow [Upgrade from ScorpionTrack Integration 0.3.x](#upgrade-from-scorpiontrack-integration-03x). You receive the 0.5.0 entities directly; then use the tables below to update anything that referred to the old ones.
-- **From 0.4.0:** update through HACS and restart. Each entry migrates automatically: the share link moves to `Reconfigure`, the speed-unit option is removed, and entities that no longer exist are removed from the entity registry. Existing Speed and Odometer entities keep their current display unit, and entities that are now disabled by default stay enabled on existing installations. To get the default 0.5.0 layout instead, delete the entry and add it again.
+- **From 0.4.0:** update through HACS and restart. Each entry migrates automatically: the share link moves to `Reconfigure`, the speed-unit option is removed, and entities that no longer exist are removed from the entity registry. Existing Speed and Odometer entities keep their current display unit, and entities that are now disabled by default stay enabled on existing installations. To match a new setup, disable the entities you do not need from `Settings > Devices & services > Entities`. Deleting the entry and adding it again within 30 days does not reset them, because Home Assistant restores the previous entity settings.
 
 ### What changed and what to do
 
 | Change | What to do |
 | --- | --- |
 | State attributes are removed from every entity. | Use the dedicated entities listed in [Replacing removed attributes](#replacing-removed-attributes). |
-| Several entities are removed. | See [Replacing removed entities](#replacing-removed-entities). |
+| Several entities are removed. | See [Replacing removed entities](#replacing-removed-entities). Version 0.6.0 provides them again, disabled by default. |
 | The speed-unit option and the `Configure` dialog are removed. | Speed and Odometer now report km/h and km and are displayed in mph and miles automatically when the account or share uses miles. To change a unit, open the entity's settings and choose a `Unit of measurement`. |
 | Status is now a fixed list: `moving`, `parked`, `idle`, `ignition`, `alarm` or `alert` (shared links: `moving`, `parked` or `idle`). Anything else is `unknown`. | Compare against these lowercase values. Hybrid entries previously reported title case, such as `Moving`. |
 | Heading reports degrees (`°`) without rounding. | Templates comparing whole numbers may need `round(0)`. |
@@ -136,7 +160,7 @@ Version 0.5.0 adopts Home Assistant Core's conventions for entities. Automations
 | New setups disable Heading, Last service date, Unit last checked in, Backup battery voltage, GPS antenna voltage, GPS antenna current, GPS satellites and GPS HDOP. | Enable any you need from the device page or `Settings > Devices & services > Entities`. |
 | Armed mode, EWM, G-Sense and Pending commands are diagnostic entities. | They appear under `Diagnostic` on the device page. Their entity IDs are unchanged. |
 | The hybrid share link is changed from `Reconfigure`, not `Configure`. | See [Faster live data for portal accounts](#faster-live-data-for-portal-accounts). |
-| Devices for vehicles removed from the account or share are deleted, and recreated if the vehicle returns. | Customisations of a deleted vehicle's entities, such as a renamed entity ID, are lost. |
+| Devices for vehicles removed from the account or share are deleted, and recreated if the vehicle returns. | Home Assistant keeps the settings of the deleted entities, so a returning vehicle's entities normally come back with their previous entity IDs and settings. |
 
 ### Replacing removed attributes
 
@@ -147,20 +171,31 @@ The examples use a vehicle called `golf_r`; replace it with your vehicle's entit
 | `speed`, `speed_kmh`, `speed_unit` | Speed sensor, for example `{{ states('sensor.golf_r_speed') }}` |
 | `heading`, `bearing`, `heading_cardinal` | Heading sensor (enable it first) |
 | `ignition`, `engine` | Ignition and Engine binary sensors |
-| `address`, `formatted_location`, `coordinates` | The tracker's `latitude` and `longitude` attributes, or zones |
+| `address`, `formatted_location`, `coordinates` | The tracker's `latitude` and `longitude` attributes, or zones. From 0.6.0, also the Location sensor (disabled by default) |
+| `accuracy` | The tracker's `gps_accuracy` attribute |
 | `odometer`, `position_odometer` and their unit attributes | Odometer sensor |
 | `vehicle_voltage`, `backup_battery_voltage`, `gps_antenna_voltage`, `gps_antenna_current`, `gps_satellites`, `gps_hdop` | The matching sensors |
-| `last_reported`, `position_timestamp`, `last_reported_age_seconds`, `stale` | Last reported sensor, or the Location stale template in [Replacing removed entities](#replacing-removed-entities) |
-| `status`, `portal_state`, `position_state` | Status sensor |
+| `last_service_date` | Last service date sensor (disabled by default) |
+| `last_reported`, `position_timestamp`, `last_reported_age_seconds`, `stale`, `stale_after_hours` | Last reported sensor. For `stale`, the Location stale binary sensor from 0.6.0 (disabled by default; the threshold is fixed at 24 hours), or the template in [Replacing removed entities](#replacing-removed-entities) |
+| `status`, `portal_state`, `position_state` | Status sensor. From 0.6.0, the raw portal value is also in the Portal state sensor (disabled by default) |
 | `privacy_mode_enabled`, `zero_speed_mode_enabled` | Privacy mode and Zero-speed mode switches |
-| `armed_mode_enabled`, `ewm_enabled`, `g_sense_enabled`, `transport_mode_active`, `garage_mode_active`, `no_alert_mode_active`, `pending_commands_count` | The matching binary sensors |
-| `make`, `model` | The device page |
-| `registration`, `alias`, `description`, `colour`, `fuel_type`, `battery_type`, `vehicle_type`, `groups`, `unit_type`, `unit_make`, `unit_model`, `installed_at`, `updated_at`, `portal_vehicle_id` | The ScorpionTrack portal |
+| `armed_mode_enabled`, `ewm_enabled`, `g_sense_enabled`, `transport_mode_active`, `garage_mode_active`, `no_alert_mode_active`, `pending_commands_count` | The matching binary sensors. From 0.6.0, the number of pending commands is also in the Pending command count sensor (disabled by default) |
+| `make`, `model` | The device page. From 0.6.0, also the Make and Model sensors (disabled by default) |
+| `registration`, `alias`, `description`, `colour`, `fuel_type`, `battery_type`, `vehicle_type`, `unit_make`, `unit_model`, `installed_at` | The ScorpionTrack portal. From 0.6.0, the matching sensors (disabled by default) |
+| `driver_module`, `immobiliser_fitted`, `install_complete` | From 0.6.0, the matching binary sensors (disabled by default) |
+| `groups`, `unit_type`, `updated_at`, `portal_vehicle_id` | The ScorpionTrack portal |
 | `recent_alerts`, `latest_alert` and alert details | Latest alert and Latest alert time sensors |
-| `share_title`, `shared_by`, `share_expires`, `created_at`, `vehicle_count`, `distance_units` | Share expires sensor on the share device |
-| Account attributes such as `user_id`, `vehicle_ids`, `total_alerts`, `unread_alerts` | Unread alerts sensor |
+| `share_expires` | Share expires sensor on the share device |
+| `share_title`, `shared_by`, `created_at` | From 0.6.0, the Share title, Shared by and Share created sensors (disabled by default) |
+| Share `vehicle_count` | The number of vehicle devices |
+| `distance_units` | None. Units follow Home Assistant's settings |
+| `unread_alerts` | Unread alerts sensor |
+| `user_id` | From 0.6.0, the User ID sensor (disabled by default) |
+| `vehicle_ids`, `total_alerts` | None |
 
 ### Replacing removed entities
+
+Version 0.6.0 provides every entity below again, disabled by default; see [Upgrade to 0.6.0](#upgrade-to-060). On 0.5.x, use these replacements.
 
 | Removed entity | Replacement |
 | --- | --- |
@@ -173,7 +208,7 @@ The examples use a vehicle called `golf_r`; replace it with your vehicle's entit
 | Driver module fitted, Installation complete, Immobiliser fitted | None. These describe fitted hardware and do not change. |
 | Share title, Shared by, Share created, and each vehicle's Share expires | The share device's Share expires sensor |
 
-To recreate Location stale, add a template binary sensor (`Settings > Devices & services > Helpers > Create helper > Template > Binary sensor`) with this state template:
+To recreate Location stale on 0.5.x, add a template binary sensor (`Settings > Devices & services > Helpers > Create helper > Template > Binary sensor`) with this state template:
 
 ```jinja
 {% set reported = states('sensor.golf_r_last_reported') | as_datetime(none) %}
@@ -217,6 +252,9 @@ Portal-account mode provides an account device and one device per vehicle.
 | Last reported, Armed mode, EWM, G-Sense, Pending commands | Vehicle | Diagnostic |
 | Heading, Last service date | Vehicle | Disabled by default |
 | Unit last checked in, Backup battery voltage, GPS antenna voltage, GPS antenna current, GPS satellites, GPS HDOP | Vehicle | Diagnostic, disabled by default |
+| Vehicle count, Last refreshed, User ID | Account | Diagnostic, disabled by default |
+| Location | Vehicle | The address, or the coordinates without one; disabled by default |
+| Location stale, Portal state, Installed, Registration, Description, Alias, Colour, Fuel type, Battery type, Make, Model, Vehicle type, Unit make, Unit model, Pending command count, Driver module fitted, Installation complete, Immobiliser fitted | Vehicle | Diagnostic, disabled by default |
 
 `Battery voltage` uses the portal's map reading, including decimal values and zero. If that reading is missing or invalid, it uses the latest-position voltage, then the vehicle health-check voltage when available. The reading reflects the tracker's last report rather than a continuous battery measurement.
 
@@ -247,16 +285,19 @@ Choose `Shared location link` for read-only tracking without portal credentials.
 3. Choose an expiry.
 4. Paste the generated share URL or token into Home Assistant.
 
-One share can contain multiple vehicles. Shared-link mode provides a share device with a diagnostic `Share expires` sensor, and for each vehicle:
+One share can contain multiple vehicles. Shared-link mode provides a share device with a diagnostic `Share expires` sensor and diagnostic `Share title`, `Shared by` and `Share created` sensors, disabled by default. For each vehicle it provides:
 
 - a vehicle tracker
 - `Status` (`moving`, `parked` or `idle`), `Speed` and `Ignition`
 - a diagnostic `Last reported` sensor
-- a `Heading` sensor, disabled by default
+- `Heading` and `Location` sensors, disabled by default
+- diagnostic `Location stale` and `Share expires` sensors, disabled by default
 
 ## Entity behaviour
 
-Vehicle coordinates are published only by the vehicle tracker, so each vehicle produces one map marker.
+Only the vehicle tracker has latitude and longitude attributes, so each vehicle produces one map marker. The optional Location sensor shows the address as text, or the coordinates when there is no address.
+
+Location stale turns on when the vehicle's last position is 24 hours old or more, or when there is no position. It is checked at every refresh.
 
 Speed and Odometer are reported in km/h and km. Home Assistant displays them in mph and miles when the account or share uses miles; change the unit from the entity's settings if you prefer another.
 
@@ -336,6 +377,8 @@ actions:
 4. Download it, restart Home Assistant, and verify the config entries.
 5. Restore the backup or return to the latest release if the older version cannot load the current entries.
 
+Rolling back from 0.6.0 to 0.5.x leaves the entities that 0.6.0 brought back in the entity registry. Any you enabled show as unavailable until you update again or delete them.
+
 Do not roll back to 0.3.x or earlier with HACS. Those versions use the built-in `scorpiontrack` domain, cannot load `ScorpionTrack Portal` entries and would replace the built-in integration again. Restore the backup taken before upgrading instead.
 
 ### Move shared links to the built-in integration
@@ -366,6 +409,7 @@ Removing repository files from HACS does not remove related Home Assistant confi
 - Account mode stores the portal email and password in the Home Assistant config entry so it can refresh automatically.
 - Share mode stores the share token in the config entry.
 - Fleet requests are restricted to HTTPS Scorpion/ScorpionTrack hosts, do not follow redirects, and reject absolute request paths.
+- User ID, Registration, Alias, Location and Shared by are disabled by default. Enabling them records an account identifier, vehicle details, a person's name or street addresses in the state history and the logbook; Location records a running trail of addresses.
 - Diagnostics use an explicit allowlist of counts and capability flags. They exclude credentials, tokens, account and vehicle identifiers, registrations, alert contents, alert timestamps, addresses, and coordinates.
 - Expected authentication and connection failures are converted into concise categories. Debug logs can include the HTTP status, method, and sanitized endpoint path, but not email addresses, passwords, API keys, full tokens, or numeric account and vehicle identifiers. Portal and fleet API failures are logged at debug level; Home Assistant reports an outage once and logs when it recovers.
 - Unexpected exceptions and dependency logs can still contain technical or identifying information. Review and redact every log or diagnostics file before sharing it.
@@ -384,7 +428,7 @@ Report security problems privately through the repository's [security advisory f
 | ScorpionTrack entries fail to load after updating from 0.3.x | Delete those entries and add them again under `ScorpionTrack Portal`, as described in [Upgrade from ScorpionTrack Integration 0.3.x](#upgrade-from-scorpiontrack-integration-03x) |
 | Vehicles appear twice | The same share is configured in both integrations; delete it from one of them |
 | A repair says the share link no longer works | Select `Reconfigure` on the ScorpionTrack Portal entry and paste a new share link, or clear it to use portal-account data only |
-| An automation refers to an entity that no longer exists after updating to 0.5.0 | See [Upgrade to 0.5.0](#upgrade-to-050) for the replacement entity or template |
+| An automation refers to an entity that no longer exists after updating to 0.5.0 | Update to 0.6.0 and enable the entity, as described in [Upgrade to 0.6.0](#upgrade-to-060), or use the replacement in [Upgrade to 0.5.0](#upgrade-to-050) |
 
 Download diagnostics from the ScorpionTrack Portal config entry's menu under `Settings > Devices & services`. Diagnostics are designed for issue reports, but review the file before uploading it.
 

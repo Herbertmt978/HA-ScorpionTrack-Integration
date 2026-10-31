@@ -85,6 +85,9 @@
       "armed_mode": {
         "name": "Armed mode"
       },
+      "driver_module": {
+        "name": "Driver module fitted"
+      },
       "engine": {
         "name": "Engine"
       },
@@ -99,6 +102,15 @@
       },
       "ignition": {
         "name": "Ignition"
+      },
+      "immobiliser_fitted": {
+        "name": "Immobiliser fitted"
+      },
+      "install_complete": {
+        "name": "Installation complete"
+      },
+      "location_stale": {
+        "name": "Location stale"
       },
       "no_alert_mode": {
         "name": "No-alert mode"
@@ -116,11 +128,26 @@
       }
     },
     "sensor": {
+      "alias": {
+        "name": "Alias"
+      },
       "backup_battery_voltage": {
         "name": "Backup battery voltage"
       },
+      "battery_type": {
+        "name": "Battery type"
+      },
       "battery_voltage": {
         "name": "Battery voltage"
+      },
+      "colour": {
+        "name": "Colour"
+      },
+      "description": {
+        "name": "Description"
+      },
+      "fuel_type": {
+        "name": "Fuel type"
       },
       "gps_antenna_current": {
         "name": "GPS antenna current"
@@ -137,6 +164,12 @@
       "heading": {
         "name": "Heading"
       },
+      "installed": {
+        "name": "Installed"
+      },
+      "last_refreshed": {
+        "name": "Last refreshed"
+      },
       "last_reported": {
         "name": "Last reported"
       },
@@ -149,14 +182,41 @@
       "latest_alert_time": {
         "name": "Latest alert time"
       },
+      "location": {
+        "name": "Location"
+      },
+      "make": {
+        "name": "Make"
+      },
+      "model": {
+        "name": "Model"
+      },
       "mot_due": {
         "name": "MOT due"
       },
       "odometer": {
         "name": "Odometer"
       },
+      "pending_command_count": {
+        "name": "Pending command count"
+      },
+      "portal_state": {
+        "name": "Portal state"
+      },
+      "registration": {
+        "name": "Registration"
+      },
+      "share_created": {
+        "name": "Share created"
+      },
       "share_expires": {
         "name": "Share expires"
+      },
+      "share_title": {
+        "name": "Share title"
+      },
+      "shared_by": {
+        "name": "Shared by"
       },
       "status": {
         "name": "Status",
@@ -175,8 +235,23 @@
       "unit_last_checked_in": {
         "name": "Unit last checked in"
       },
+      "unit_make": {
+        "name": "Unit make"
+      },
+      "unit_model": {
+        "name": "Unit model"
+      },
       "unread_alerts": {
         "name": "Unread alerts"
+      },
+      "user_id": {
+        "name": "User ID"
+      },
+      "vehicle_count": {
+        "name": "Vehicle count"
+      },
+      "vehicle_type": {
+        "name": "Vehicle type"
       }
     },
     "switch": {

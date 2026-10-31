@@ -4,8 +4,22 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+No changes yet.
+
+## 0.6.0 - 2026-10-31
+
+### Added
+
+- Bring back the entities removed in 0.5.0, disabled by default, so you can enable any you want. They are new entities with new unique IDs, so they start disabled whichever version you update from, and normally get the entity IDs they had in 0.4.0. Entity attributes stay removed.
+  - Portal account: Vehicle count, Last refreshed and User ID.
+  - Portal-account vehicles: Location, Location stale, Portal state, Installed, Registration, Description, Alias, Colour, Fuel type, Battery type, Make, Model, Vehicle type, Unit make, Unit model, Pending command count, Driver module fitted, Installation complete and Immobiliser fitted.
+  - Location share: Share title, Shared by and Share created.
+  - Shared-location vehicles: Location, Location stale and Share expires.
+
 ### Changed
 
+- Compared with 0.4.0, every restored entity except Location is diagnostic. Location stale uses the problem device class in both modes and turns on when the last position is 24 hours old or more, or when there is none. Text longer than 255 characters is cut short.
+- Shared-location entries update their entities at every refresh again, so Location stale can turn on while the share data is unchanged.
 - Add Marketplace categories (`presence_location.trackers` and `vehicles_transport`) to the manifest for the HACS default list.
 - Remove the unused `strings.json`. Custom integrations load text from `translations/en.json`, which is unchanged.
 - Add an "Add integration" My Home Assistant button to the README.

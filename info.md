@@ -9,7 +9,7 @@ Portal accounts can optionally use a share link in the same config entry: authen
 Home Assistant's built-in ScorpionTrack integration, installed from **Settings → Devices & services → Add integration**, uses the shared-location API for read-only tracking. Portal-account mode stays in this custom integration because it relies on the ScorpionTrack web portal's login route, which is less stable than that API. Its source and review history are available in [Herbertmt978/ScorpionTrack-Integration](https://github.com/Herbertmt978/ScorpionTrack-Integration).
 
 > [!IMPORTANT]
-> Version 0.5.0 removes entity attributes and several entities, replaces the speed-unit option with Home Assistant's unit settings, and changes status values. Check the README's "Upgrade to 0.5.0" section for what replaces each one before updating.
+> Version 0.5.0 removes entity attributes and several entities, replaces the speed-unit option with Home Assistant's unit settings, and changes status values. Version 0.6.0 brings those entities back, disabled by default; attributes stay removed. Check the README's "Upgrade to 0.6.0" and "Upgrade to 0.5.0" sections before updating.
 >
 > Versions 0.3.x and earlier used the built-in `scorpiontrack` domain and replaced the built-in integration. Updating from them means deleting the old entries and adding them again under ScorpionTrack Portal. Make a Home Assistant backup first and follow the upgrade steps in the README.
 
