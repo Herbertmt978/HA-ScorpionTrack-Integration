@@ -56,8 +56,8 @@ async def test_custom_integration_is_loaded(hass: HomeAssistant) -> None:
 @pytest.mark.parametrize(
     ("entry_fixture", "coordinator_type", "expected_entities"),
     [
-        ("share_config_entry", ScorpionTrackShareCoordinator, 13),
-        ("account_config_entry", ScorpionTrackAccountCoordinator, 53),
+        ("share_config_entry", ScorpionTrackShareCoordinator, 7),
+        ("account_config_entry", ScorpionTrackAccountCoordinator, 31),
     ],
 )
 async def test_setup_runtime_data_entity_count_and_unload(
@@ -127,12 +127,99 @@ async def test_migrate_hybrid_share_token_into_entry_data(
     await setup_integration(hass, entry)
 
     assert entry.state is ConfigEntryState.LOADED
-    assert entry.minor_version == 2
+    assert entry.minor_version == 3
     assert entry.data.get(CONF_SHARE_TOKEN) == expected_share_token
-    assert entry.options == {"speed_unit": "km/h"}
+    assert entry.options == {}
     assert (entry.runtime_data.share_client is not None) is (
         expected_share_token is not None
     )
+
+
+async def test_migrate_removes_speed_unit_option(hass: HomeAssistant) -> None:
+    """Version 1.2 entries drop the speed-unit option for Home Assistant's units."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={CONF_SETUP_TYPE: "share", CONF_SHARE_TOKEN: "canonical-token"},
+        options={"speed_unit": "mph"},
+        unique_id="share_101",
+        minor_version=2,
+    )
+    await setup_integration(hass, entry)
+
+    assert entry.state is ConfigEntryState.LOADED
+    assert entry.minor_version == 3
+    assert entry.data == {CONF_SETUP_TYPE: "share", CONF_SHARE_TOKEN: "canonical-token"}
+    assert entry.options == {}
+
+
+@pytest.mark.parametrize(
+    ("entry_fixture", "removed", "kept"),
+    [
+        (
+            "account_config_entry",
+            [
+                ("sensor", "42_vehicle_count"),
+                ("sensor", "42_last_refreshed"),
+                ("sensor", "42_2001_location"),
+                ("sensor", "42_2001_registration"),
+                ("sensor", "42_2001_unit_model"),
+                ("sensor", "42_2001_pending_command_count"),
+                ("binary_sensor", "42_2001_location_stale"),
+                ("binary_sensor", "42_2001_immobiliser_fitted"),
+            ],
+            [
+                ("sensor", "42_2001_speed"),
+                ("sensor", "42_2001_odometer"),
+                ("sensor", "42_unread_alerts"),
+                ("binary_sensor", "42_2001_pending_commands"),
+            ],
+        ),
+        (
+            "share_config_entry",
+            [
+                ("sensor", "101_share_share_title"),
+                ("sensor", "101_2001_share_expires"),
+                ("sensor", "101_2001_location"),
+                ("binary_sensor", "101_2001_location_stale"),
+            ],
+            [
+                ("sensor", "101_share_share_expires"),
+                ("sensor", "101_2001_status"),
+            ],
+        ),
+    ],
+)
+async def test_migrate_removes_entities_no_longer_provided(
+    hass: HomeAssistant,
+    entity_registry: er.EntityRegistry,
+    request: pytest.FixtureRequest,
+    entry_fixture: str,
+    removed: list[tuple[str, str]],
+    kept: list[tuple[str, str]],
+) -> None:
+    """Upgrading to 1.3 removes only the registry entries for retired entities."""
+    fixture_entry: MockConfigEntry = request.getfixturevalue(entry_fixture)
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title=fixture_entry.title,
+        data=fixture_entry.data,
+        unique_id=fixture_entry.unique_id,
+        entry_id=fixture_entry.entry_id,
+        minor_version=2,
+    )
+    entry.add_to_hass(hass)
+    for domain, unique_id in (*removed, *kept):
+        entity_registry.async_get_or_create(
+            domain, DOMAIN, unique_id, config_entry=entry
+        )
+
+    await setup_integration(hass, entry)
+
+    assert entry.minor_version == 3
+    for domain, unique_id in removed:
+        assert entity_registry.async_get_entity_id(domain, DOMAIN, unique_id) is None
+    for domain, unique_id in kept:
+        assert entity_registry.async_get_entity_id(domain, DOMAIN, unique_id)
 
 
 async def test_migration_from_future_version_fails(hass: HomeAssistant) -> None:

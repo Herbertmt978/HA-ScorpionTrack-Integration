@@ -1,8 +1,108 @@
 {
   "entity": {
+    "binary_sensor": {
+      "armed_mode": {
+        "default": "mdi:shield-car"
+      },
+      "ewm": {
+        "default": "mdi:motion-sensor"
+      },
+      "g_sense": {
+        "default": "mdi:car-emergency"
+      },
+      "garage_mode": {
+        "default": "mdi:garage-variant"
+      },
+      "ignition": {
+        "default": "mdi:key-variant"
+      },
+      "no_alert_mode": {
+        "default": "mdi:bell-off"
+      },
+      "transport_mode": {
+        "default": "mdi:truck-fast"
+      }
+    },
+    "button": {
+      "mark_alerts_read": {
+        "default": "mdi:bell-check-outline"
+      }
+    },
     "device_tracker": {
       "vehicle_location": {
         "default": "mdi:car"
+      }
+    },
+    "sensor": {
+      "backup_battery_voltage": {
+        "default": "mdi:battery-medium"
+      },
+      "battery_voltage": {
+        "default": "mdi:car-battery"
+      },
+      "gps_antenna_voltage": {
+        "default": "mdi:antenna"
+      },
+      "gps_hdop": {
+        "default": "mdi:crosshairs-gps"
+      },
+      "gps_satellites": {
+        "default": "mdi:satellite-variant"
+      },
+      "heading": {
+        "default": "mdi:compass"
+      },
+      "last_reported": {
+        "default": "mdi:clock-outline"
+      },
+      "last_service_date": {
+        "default": "mdi:wrench-clock"
+      },
+      "latest_alert": {
+        "default": "mdi:alert-circle-outline"
+      },
+      "latest_alert_time": {
+        "default": "mdi:clock-alert-outline"
+      },
+      "mot_due": {
+        "default": "mdi:calendar-check"
+      },
+      "odometer": {
+        "default": "mdi:counter"
+      },
+      "share_expires": {
+        "default": "mdi:calendar-clock"
+      },
+      "status": {
+        "default": "mdi:car-info",
+        "state": {
+          "alarm": "mdi:alarm-light",
+          "alert": "mdi:alert",
+          "idle": "mdi:car-clock",
+          "ignition": "mdi:key-variant",
+          "moving": "mdi:car-arrow-right",
+          "parked": "mdi:parking"
+        }
+      },
+      "tax_due": {
+        "default": "mdi:calendar"
+      },
+      "unit_last_checked_in": {
+        "default": "mdi:router-wireless"
+      },
+      "unread_alerts": {
+        "default": "mdi:bell-badge"
+      }
+    },
+    "switch": {
+      "privacy_mode": {
+        "default": "mdi:incognito",
+        "state": {
+          "off": "mdi:incognito-off"
+        }
+      },
+      "zero_speed_mode": {
+        "default": "mdi:speedometer-slow"
       }
     }
   }

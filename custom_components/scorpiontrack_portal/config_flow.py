@@ -9,22 +9,14 @@ from typing import Any, override
 
 import voluptuous as vol
 from aiohttp import CookieJar
-from homeassistant.config_entries import (
-    ConfigEntry,
-    ConfigFlow,
-    ConfigFlowResult,
-    OptionsFlowWithReload,
-)
-from homeassistant.const import CONF_EMAIL, CONF_PASSWORD, UnitOfSpeed
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import (
     async_create_clientsession,
     async_get_clientsession,
 )
 from homeassistant.helpers.selector import (
-    SelectSelector,
-    SelectSelectorConfig,
-    SelectSelectorMode,
     TextSelector,
     TextSelectorConfig,
     TextSelectorType,
@@ -52,12 +44,10 @@ from .account_api import (
 from .const import (
     CONF_SETUP_TYPE,
     CONF_SHARE_TOKEN,
-    CONF_SPEED_UNIT,
     DOMAIN,
     SETUP_TYPE_ACCOUNT,
     SETUP_TYPE_SHARE,
     SHARE_DEFAULT_NAME,
-    SPEED_UNITS,
 )
 from .utils import stable_hash
 
@@ -68,12 +58,6 @@ _EMAIL_SELECTOR = TextSelector(
 )
 _PASSWORD_SELECTOR = TextSelector(
     TextSelectorConfig(type=TextSelectorType.PASSWORD, autocomplete="current-password")
-)
-_SPEED_UNIT_SELECTOR = SelectSelector(
-    SelectSelectorConfig(
-        options=[str(unit) for unit in SPEED_UNITS],
-        mode=SelectSelectorMode.DROPDOWN,
-    )
 )
 
 
@@ -98,13 +82,6 @@ class _AccountInfo:
 def _account_fallback_unique_id(email: str) -> str:
     """Return the unique ID used when the portal does not report a user ID."""
     return f"{SETUP_TYPE_ACCOUNT}_{stable_hash(email)}"
-
-
-def _default_speed_unit(hass: HomeAssistant) -> str:
-    """Return an initial speed unit from Home Assistant's unit system."""
-    if hass.config.units.wind_speed_unit == UnitOfSpeed.MILES_PER_HOUR:
-        return UnitOfSpeed.MILES_PER_HOUR
-    return UnitOfSpeed.KILOMETERS_PER_HOUR
 
 
 async def _async_validate_account(
@@ -181,14 +158,7 @@ class ScorpionTrackConfigFlow(ConfigFlow, domain=DOMAIN):
     """Handle a config flow for ScorpionTrack Portal."""
 
     VERSION = 1
-    MINOR_VERSION = 2
-
-    @staticmethod
-    @callback
-    @override
-    def async_get_options_flow(config_entry: ConfigEntry) -> ScorpionTrackOptionsFlow:
-        """Return the options flow."""
-        return ScorpionTrackOptionsFlow()
+    MINOR_VERSION = 3
 
     @override
     async def async_step_user(
@@ -225,11 +195,7 @@ class ScorpionTrackConfigFlow(ConfigFlow, domain=DOMAIN):
                 }
                 if share is not None:
                     data[CONF_SHARE_TOKEN] = share.token
-                return self.async_create_entry(
-                    title=account.title,
-                    data=data,
-                    options={CONF_SPEED_UNIT: user_input[CONF_SPEED_UNIT]},
-                )
+                return self.async_create_entry(title=account.title, data=data)
 
         return self.async_show_form(
             step_id="account",
@@ -239,9 +205,6 @@ class ScorpionTrackConfigFlow(ConfigFlow, domain=DOMAIN):
                         vol.Required(CONF_EMAIL): _EMAIL_SELECTOR,
                         vol.Required(CONF_PASSWORD): _PASSWORD_SELECTOR,
                         vol.Optional(CONF_SHARE_TOKEN): str,
-                        vol.Required(
-                            CONF_SPEED_UNIT, default=_default_speed_unit(self.hass)
-                        ): _SPEED_UNIT_SELECTOR,
                     }
                 ),
                 user_input or {},
@@ -270,20 +233,12 @@ class ScorpionTrackConfigFlow(ConfigFlow, domain=DOMAIN):
                         CONF_SETUP_TYPE: SETUP_TYPE_SHARE,
                         CONF_SHARE_TOKEN: share.token,
                     },
-                    options={CONF_SPEED_UNIT: user_input[CONF_SPEED_UNIT]},
                 )
 
         return self.async_show_form(
             step_id="share",
             data_schema=self.add_suggested_values_to_schema(
-                vol.Schema(
-                    {
-                        vol.Required(CONF_SHARE_TOKEN): str,
-                        vol.Required(
-                            CONF_SPEED_UNIT, default=_default_speed_unit(self.hass)
-                        ): _SPEED_UNIT_SELECTOR,
-                    }
-                ),
+                vol.Schema({vol.Required(CONF_SHARE_TOKEN): str}),
                 user_input or {},
             ),
             errors=errors,
@@ -395,26 +350,4 @@ class ScorpionTrackConfigFlow(ConfigFlow, domain=DOMAIN):
                 user_input or {CONF_SHARE_TOKEN: entry.data[CONF_SHARE_TOKEN]},
             ),
             errors=errors,
-        )
-
-
-class ScorpionTrackOptionsFlow(OptionsFlowWithReload):
-    """Choose how ScorpionTrack speeds are displayed."""
-
-    async def async_step_init(
-        self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
-        """Manage the speed unit."""
-        if user_input is not None:
-            return self.async_create_entry(data=user_input)
-
-        return self.async_show_form(
-            step_id="init",
-            data_schema=self.add_suggested_values_to_schema(
-                vol.Schema({vol.Required(CONF_SPEED_UNIT): _SPEED_UNIT_SELECTOR}),
-                {
-                    CONF_SPEED_UNIT: _default_speed_unit(self.hass),
-                    **self.config_entry.options,
-                },
-            ),
         )

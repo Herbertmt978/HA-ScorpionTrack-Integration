@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, override
+from typing import override
 
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
@@ -26,7 +26,6 @@ from .entity import (
     ScorpionTrackAccountVehicleEntity,
     ScorpionTrackShareVehicleEntity,
     async_add_vehicle_entities,
-    position_is_stale,
 )
 
 PARALLEL_UPDATES = 0
@@ -49,105 +48,66 @@ class ScorpionTrackShareBinarySensorDescription(BinarySensorEntityDescription):
 ACCOUNT_BINARY_SENSORS: tuple[ScorpionTrackAccountBinarySensorDescription, ...] = (
     ScorpionTrackAccountBinarySensorDescription(
         key="ignition",
-        name="Ignition",
-        icon="mdi:key-variant",
+        translation_key="ignition",
         value_fn=lambda vehicle: (
             vehicle.position.ignition if vehicle.position is not None else None
         ),
     ),
     ScorpionTrackAccountBinarySensorDescription(
         key="engine",
-        name="Engine",
-        icon="mdi:engine",
+        translation_key="engine",
+        device_class=BinarySensorDeviceClass.RUNNING,
         value_fn=lambda vehicle: (
             vehicle.position.engine if vehicle.position is not None else None
         ),
     ),
     ScorpionTrackAccountBinarySensorDescription(
         key="transport_mode_active",
-        name="Transport Mode Active",
-        icon="mdi:truck-fast",
+        translation_key="transport_mode",
         value_fn=lambda vehicle: vehicle.transport_mode_active,
     ),
     ScorpionTrackAccountBinarySensorDescription(
         key="garage_mode_active",
-        name="Garage Mode Active",
-        icon="mdi:garage-variant",
+        translation_key="garage_mode",
         value_fn=lambda vehicle: vehicle.garage_mode_active,
     ),
     ScorpionTrackAccountBinarySensorDescription(
         key="no_alert_mode_active",
-        name="No-Alert Mode Active",
-        icon="mdi:bell-off",
+        translation_key="no_alert_mode",
         value_fn=lambda vehicle: vehicle.no_alert_mode_active,
     ),
     ScorpionTrackAccountBinarySensorDescription(
-        key="ewm_enabled",
-        name="EWM Enabled",
-        icon="mdi:motion-sensor",
-        value_fn=lambda vehicle: vehicle.ewm_enabled,
-    ),
-    ScorpionTrackAccountBinarySensorDescription(
         key="armed_mode_enabled",
-        name="Armed Mode Enabled",
-        icon="mdi:shield-car",
+        translation_key="armed_mode",
+        entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda vehicle: vehicle.armed_mode_enabled,
     ),
     ScorpionTrackAccountBinarySensorDescription(
-        key="driver_module",
-        name="Driver Module Fitted",
-        icon="mdi:key-chain-variant",
-        value_fn=lambda vehicle: vehicle.driver_module,
+        key="ewm_enabled",
+        translation_key="ewm",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda vehicle: vehicle.ewm_enabled,
     ),
     ScorpionTrackAccountBinarySensorDescription(
         key="g_sense_enabled",
-        name="G-Sense Enabled",
-        icon="mdi:car-emergency",
+        translation_key="g_sense",
+        entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda vehicle: vehicle.g_sense_enabled,
     ),
     ScorpionTrackAccountBinarySensorDescription(
-        key="install_complete",
-        name="Installation Complete",
-        icon="mdi:check-decagram",
-        value_fn=lambda vehicle: vehicle.install_complete,
-    ),
-    ScorpionTrackAccountBinarySensorDescription(
-        key="immobiliser_fitted",
-        name="Immobiliser Fitted",
-        icon="mdi:shield-car",
-        value_fn=lambda vehicle: vehicle.immobiliser_fitted,
-    ),
-    ScorpionTrackAccountBinarySensorDescription(
         key="pending_commands",
-        name="Pending Commands",
+        translation_key="pending_commands",
         device_class=BinarySensorDeviceClass.PROBLEM,
-        icon="mdi:progress-clock",
+        entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda vehicle: vehicle.pending_commands_count > 0,
-    ),
-    ScorpionTrackAccountBinarySensorDescription(
-        key="location_stale",
-        name="Location Stale",
-        device_class=BinarySensorDeviceClass.PROBLEM,
-        icon="mdi:map-marker-alert",
-        value_fn=lambda vehicle: position_is_stale(
-            vehicle.position.timestamp if vehicle.position is not None else None
-        ),
     ),
 )
 
 SHARE_BINARY_SENSORS: tuple[ScorpionTrackShareBinarySensorDescription, ...] = (
     ScorpionTrackShareBinarySensorDescription(
         key="ignition",
-        name="Ignition",
-        icon="mdi:engine",
+        translation_key="ignition",
         value_fn=lambda vehicle: vehicle.position.ignition,
-    ),
-    ScorpionTrackShareBinarySensorDescription(
-        key="location_stale",
-        name="Location Stale",
-        icon="mdi:clock-alert-outline",
-        entity_category=EntityCategory.DIAGNOSTIC,
-        value_fn=lambda vehicle: position_is_stale(vehicle.position.timestamp),
     ),
 )
 
@@ -200,23 +160,14 @@ class ScorpionTrackAccountBinarySensor(
         description: ScorpionTrackAccountBinarySensorDescription,
     ) -> None:
         """Initialize the binary sensor."""
-        super().__init__(coordinator, vehicle_id)
+        super().__init__(coordinator, vehicle_id, description.key)
         self.entity_description = description
-        self._attr_unique_id = (
-            f"{coordinator.account_identifier}_{vehicle_id}_{description.key}"
-        )
 
     @property
     @override
     def is_on(self) -> bool | None:
         """Return the sensor state."""
         return self.entity_description.value_fn(self.vehicle)
-
-    @property
-    @override
-    def extra_state_attributes(self) -> dict[str, Any]:
-        """Return extra state attributes."""
-        return self.common_vehicle_attributes()
 
 
 class ScorpionTrackShareBinarySensor(
@@ -233,18 +184,11 @@ class ScorpionTrackShareBinarySensor(
         description: ScorpionTrackShareBinarySensorDescription,
     ) -> None:
         """Initialize the binary sensor."""
-        super().__init__(coordinator, vehicle_id)
+        super().__init__(coordinator, vehicle_id, description.key)
         self.entity_description = description
-        self._attr_unique_id = f"{coordinator.data.id}_{vehicle_id}_{description.key}"
 
     @property
     @override
     def is_on(self) -> bool | None:
         """Return the sensor state."""
         return self.entity_description.value_fn(self.vehicle)
-
-    @property
-    @override
-    def extra_state_attributes(self) -> dict[str, Any]:
-        """Return extra state attributes."""
-        return self.common_location_attributes()

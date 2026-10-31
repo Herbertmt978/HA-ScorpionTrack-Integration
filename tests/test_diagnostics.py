@@ -29,7 +29,7 @@ from . import setup_integration
                     "setup_type": "account",
                     "state": "loaded",
                     "version": 1,
-                    "minor_version": 2,
+                    "minor_version": 3,
                 },
                 "coordinator": {
                     "last_update_success": True,
@@ -38,13 +38,13 @@ from . import setup_integration
                     "vehicle_count": 1,
                 },
                 "entities": {
-                    "total": 53,
-                    "disabled": 0,
+                    "total": 31,
+                    "disabled": 8,
                     "by_platform": {
-                        "binary_sensor": 13,
+                        "binary_sensor": 9,
                         "button": 1,
                         "device_tracker": 1,
-                        "sensor": 36,
+                        "sensor": 18,
                         "switch": 2,
                     },
                 },
@@ -63,7 +63,7 @@ from . import setup_integration
                     "setup_type": "share",
                     "state": "loaded",
                     "version": 1,
-                    "minor_version": 2,
+                    "minor_version": 3,
                 },
                 "coordinator": {
                     "last_update_success": True,
@@ -72,12 +72,12 @@ from . import setup_integration
                     "vehicle_count": 1,
                 },
                 "entities": {
-                    "total": 13,
-                    "disabled": 0,
+                    "total": 7,
+                    "disabled": 1,
                     "by_platform": {
-                        "binary_sensor": 2,
+                        "binary_sensor": 1,
                         "device_tracker": 1,
-                        "sensor": 10,
+                        "sensor": 5,
                     },
                 },
             },

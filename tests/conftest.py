@@ -7,7 +7,7 @@ from dataclasses import fields
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from typing import Any
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, PropertyMock, patch
 
 import pytest
 from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
@@ -40,6 +40,17 @@ from custom_components.scorpiontrack_portal.const import (
 @pytest.fixture(autouse=True)
 def auto_enable_custom_integrations(enable_custom_integrations: None) -> None:
     """Enable custom integrations for every test."""
+
+
+@pytest.fixture
+def entity_registry_enabled_by_default() -> Iterator[None]:
+    """Enable entities that are disabled by default, as Core's test suite does."""
+    with patch(
+        "homeassistant.helpers.entity.Entity.entity_registry_enabled_default",
+        return_value=True,
+        new_callable=PropertyMock,
+    ):
+        yield
 
 
 @pytest.fixture
@@ -197,7 +208,7 @@ def share_config_entry() -> MockConfigEntry:
         },
         unique_id="share_101",
         entry_id="01SCORPIONTRACK_SHARE_TEST",
-        minor_version=2,
+        minor_version=3,
     )
 
 
@@ -214,7 +225,7 @@ def account_config_entry() -> MockConfigEntry:
         },
         unique_id="account_42",
         entry_id="01SCORPIONTRACK_ACCOUNT_TEST",
-        minor_version=2,
+        minor_version=3,
     )
 
 
@@ -230,10 +241,9 @@ def hybrid_account_config_entry() -> MockConfigEntry:
             CONF_PASSWORD: "correct-password",
             CONF_SHARE_TOKEN: "canonical-token",
         },
-        options={"speed_unit": "km/h"},
         unique_id="account_42",
         entry_id="01SCORPIONTRACK_HYBRID_TEST",
-        minor_version=2,
+        minor_version=3,
     )
 
 

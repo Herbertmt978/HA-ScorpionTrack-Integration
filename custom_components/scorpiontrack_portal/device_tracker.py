@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
-from typing import Any, override
+from typing import override
 
 from homeassistant.components.device_tracker.entity import TrackerEntity
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .account_api import ScorpionTrackVehiclePosition
-from .const import convert_speed
 from .coordinator import (
     ScorpionTrackAccountCoordinator,
     ScorpionTrackConfigEntry,
@@ -19,7 +18,6 @@ from .entity import (
     ScorpionTrackAccountVehicleEntity,
     ScorpionTrackShareVehicleEntity,
     async_add_vehicle_entities,
-    format_location,
 )
 
 PARALLEL_UPDATES = 0
@@ -63,8 +61,7 @@ class ScorpionTrackAccountTracker(ScorpionTrackAccountVehicleEntity, TrackerEnti
         self, coordinator: ScorpionTrackAccountCoordinator, vehicle_id: int
     ) -> None:
         """Initialize the tracker."""
-        super().__init__(coordinator, vehicle_id)
-        self._attr_unique_id = f"{coordinator.account_identifier}_{vehicle_id}_tracker"
+        super().__init__(coordinator, vehicle_id, "tracker")
 
     @property
     def _position(self) -> ScorpionTrackVehiclePosition | None:
@@ -76,7 +73,7 @@ class ScorpionTrackAccountTracker(ScorpionTrackAccountVehicleEntity, TrackerEnti
     @property
     @override
     def available(self) -> bool:
-        """Return if the tracker is available."""
+        """Return if the tracker has a complete position."""
         position = self._position
         return (
             position is not None
@@ -107,19 +104,6 @@ class ScorpionTrackAccountTracker(ScorpionTrackAccountVehicleEntity, TrackerEnti
             return 0.0
         return float(position.accuracy)
 
-    @property
-    @override
-    def extra_state_attributes(self) -> dict[str, Any]:
-        """Return extra state attributes."""
-        position = self._position
-        if position is None:
-            return {}
-        attributes = self.common_vehicle_attributes()
-        attributes["formatted_location"] = format_location(
-            position.latitude, position.longitude, position.address
-        )
-        return attributes
-
 
 class ScorpionTrackShareTracker(ScorpionTrackShareVehicleEntity, TrackerEntity):
     """Represent the latest shared GPS location for a vehicle."""
@@ -131,13 +115,12 @@ class ScorpionTrackShareTracker(ScorpionTrackShareVehicleEntity, TrackerEntity):
         self, coordinator: ScorpionTrackShareCoordinator, vehicle_id: int
     ) -> None:
         """Initialize the tracker."""
-        super().__init__(coordinator, vehicle_id)
-        self._attr_unique_id = f"{coordinator.data.id}_{vehicle_id}_tracker"
+        super().__init__(coordinator, vehicle_id, "tracker")
 
     @property
     @override
     def available(self) -> bool:
-        """Return if the tracker is available."""
+        """Return if the tracker has a complete position."""
         if not super().available:
             return False
         position = self.vehicle.position
@@ -154,18 +137,3 @@ class ScorpionTrackShareTracker(ScorpionTrackShareVehicleEntity, TrackerEntity):
     def longitude(self) -> float | None:
         """Return the longitude."""
         return self.vehicle.position.longitude if super().available else None
-
-    @property
-    @override
-    def extra_state_attributes(self) -> dict[str, Any]:
-        """Return extra state attributes."""
-        if not super().available:
-            return {}
-        speed_kmh = self.vehicle.position.speed_kmh
-        speed_unit = self.coordinator.speed_unit
-        return {
-            **self.common_location_attributes(),
-            "speed": convert_speed(speed_kmh, speed_unit),
-            "speed_unit": speed_unit,
-            "speed_kmh": speed_kmh,
-        }

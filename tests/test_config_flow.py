@@ -11,7 +11,6 @@ from homeassistant.config_entries import SOURCE_USER
 from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResult, FlowResultType
-from homeassistant.util.unit_system import US_CUSTOMARY_SYSTEM
 from pyscorpiontrack import (
     ScorpionTrackConnectionError as ScorpionTrackShareConnectionError,
 )
@@ -33,7 +32,6 @@ from custom_components.scorpiontrack_portal.account_api import (
 from custom_components.scorpiontrack_portal.const import (
     CONF_SETUP_TYPE,
     CONF_SHARE_TOKEN,
-    CONF_SPEED_UNIT,
     DOMAIN,
     SETUP_TYPE_ACCOUNT,
     SETUP_TYPE_SHARE,
@@ -105,23 +103,9 @@ async def test_share_flow_creates_entry(
         CONF_SETUP_TYPE: SETUP_TYPE_SHARE,
         CONF_SHARE_TOKEN: "canonical-token",
     }
-    assert result["options"] == {CONF_SPEED_UNIT: "km/h"}
+    assert result["options"] == {}
     assert result["result"].unique_id == "share_101"
     client_mocks.share.async_get_share.assert_awaited_once()
-
-
-async def test_share_flow_defaults_to_mph_for_us_customary_units(
-    hass: HomeAssistant,
-) -> None:
-    """The initial speed unit follows Home Assistant's unit system."""
-    hass.config.units = US_CUSTOMARY_SYSTEM
-    result = await _async_start_route(hass, "share")
-    result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], {CONF_SHARE_TOKEN: "canonical-token"}
-    )
-
-    assert result["type"] is FlowResultType.CREATE_ENTRY
-    assert result["options"] == {CONF_SPEED_UNIT: "mph"}
 
 
 @pytest.mark.parametrize("fallback", ["vehicle", "default"])
@@ -220,7 +204,7 @@ async def test_account_flow_creates_entry(
     """Valid portal credentials should create an account entry."""
     result = await _async_start_route(hass, "account")
     schema_keys = {marker.schema for marker in result["data_schema"].schema}
-    assert schema_keys == {CONF_EMAIL, CONF_PASSWORD, CONF_SHARE_TOKEN, CONF_SPEED_UNIT}
+    assert schema_keys == {CONF_EMAIL, CONF_PASSWORD, CONF_SHARE_TOKEN}
 
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"],
@@ -247,11 +231,7 @@ async def test_account_flow_creates_hybrid_entry(
     result = await _async_start_route(hass, "account")
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"],
-        {
-            **ACCOUNT_INPUT,
-            CONF_SHARE_TOKEN: "canonical-token",
-            CONF_SPEED_UNIT: "mph",
-        },
+        {**ACCOUNT_INPUT, CONF_SHARE_TOKEN: "canonical-token"},
     )
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
@@ -261,7 +241,7 @@ async def test_account_flow_creates_hybrid_entry(
         CONF_PASSWORD: "correct-password",
         CONF_SHARE_TOKEN: "canonical-token",
     }
-    assert result["options"] == {CONF_SPEED_UNIT: "mph"}
+    assert result["options"] == {}
     client_mocks.share.async_get_share.assert_awaited_once()
 
 
@@ -412,7 +392,7 @@ async def test_reauth_keeps_fallback_identity_when_user_id_appears(
             CONF_PASSWORD: "old-password",
         },
         unique_id=fallback_unique_id,
-        minor_version=2,
+        minor_version=3,
     )
     result = await _async_start_reauth(hass, entry)
     result = await hass.config_entries.flow.async_configure(
@@ -608,24 +588,13 @@ async def test_reconfigure_share_recovers_from_validation_errors(
 @pytest.mark.parametrize(
     "entry_fixture", ["share_config_entry", "account_config_entry"]
 )
-async def test_options_flow_updates_speed_unit(
+async def test_entries_have_no_options(
     hass: HomeAssistant,
     request: pytest.FixtureRequest,
     entry_fixture: str,
 ) -> None:
-    """Both entry types expose only the display speed unit as an option."""
+    """Units are chosen per entity in Home Assistant, so there is no options flow."""
     entry: MockConfigEntry = request.getfixturevalue(entry_fixture)
     entry.add_to_hass(hass)
 
-    result = await hass.config_entries.options.async_init(entry.entry_id)
-    assert result["type"] is FlowResultType.FORM
-    assert result["step_id"] == "init"
-    schema_keys = {marker.schema for marker in result["data_schema"].schema}
-    assert schema_keys == {CONF_SPEED_UNIT}
-
-    result = await hass.config_entries.options.async_configure(
-        result["flow_id"], {CONF_SPEED_UNIT: "mph"}
-    )
-
-    assert result["type"] is FlowResultType.CREATE_ENTRY
-    assert entry.options == {CONF_SPEED_UNIT: "mph"}
+    assert not entry.supports_options

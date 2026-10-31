@@ -36,16 +36,14 @@ class ScorpionTrackSwitchDescription(SwitchEntityDescription):
 SWITCHES: tuple[ScorpionTrackSwitchDescription, ...] = (
     ScorpionTrackSwitchDescription(
         key="privacy_mode",
-        name="Privacy Mode",
-        icon="mdi:incognito",
+        translation_key="privacy_mode",
         mode_key="privacy_mode_enabled",
         error_translation_key="privacy_mode_update_failed",
         value_fn=lambda vehicle: vehicle.privacy_mode_enabled,
     ),
     ScorpionTrackSwitchDescription(
         key="zero_speed_mode",
-        name="Zero-Speed Mode",
-        icon="mdi:speedometer-slow",
+        translation_key="zero_speed_mode",
         mode_key="zero_speed_mode_enabled",
         error_translation_key="zero_speed_mode_update_failed",
         value_fn=lambda vehicle: vehicle.zero_speed_mode_enabled,
@@ -86,11 +84,8 @@ class ScorpionTrackSwitch(ScorpionTrackAccountVehicleEntity, SwitchEntity):
         description: ScorpionTrackSwitchDescription,
     ) -> None:
         """Initialize the switch."""
-        super().__init__(coordinator, vehicle_id)
+        super().__init__(coordinator, vehicle_id, description.key)
         self.entity_description = description
-        self._attr_unique_id = (
-            f"{coordinator.account_identifier}_{vehicle_id}_{description.key}"
-        )
 
     @property
     @override
@@ -138,9 +133,3 @@ class ScorpionTrackSwitch(ScorpionTrackAccountVehicleEntity, SwitchEntity):
             ) from err
 
         await self.coordinator.async_request_account_refresh()
-
-    @property
-    @override
-    def extra_state_attributes(self) -> dict[str, Any]:
-        """Return extra state attributes."""
-        return self.common_vehicle_attributes()

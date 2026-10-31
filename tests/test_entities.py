@@ -1,24 +1,36 @@
-"""Test ScorpionTrack entities through Home Assistant's public surfaces."""
+"""Test ScorpionTrack Portal entities through Home Assistant's public surfaces."""
 
 from __future__ import annotations
 
 from dataclasses import replace
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from types import SimpleNamespace
 from typing import Any
+from unittest.mock import patch
 
 import pytest
-from homeassistant.const import STATE_UNAVAILABLE
+from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
-from pyscorpiontrack import ScorpionTrackConnectionError, ScorpionTrackShare
+from homeassistant.helpers import issue_registry as ir
+from pyscorpiontrack import (
+    ScorpionTrackConnectionError,
+    ScorpionTrackInvalidTokenError,
+    ScorpionTrackShare,
+    ScorpionTrackShareUnavailableError,
+)
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
     async_fire_time_changed,
+    snapshot_platform,
 )
+from syrupy.assertion import SnapshotAssertion
 
-from custom_components.scorpiontrack_portal.account_api import ScorpionTrackAccountData
+from custom_components.scorpiontrack_portal.account_api import (
+    ScorpionTrackAccountData,
+    ScorpionTrackAlertSummary,
+)
 from custom_components.scorpiontrack_portal.binary_sensor import (
     ACCOUNT_BINARY_SENSORS,
     SHARE_BINARY_SENSORS,
@@ -38,6 +50,9 @@ from custom_components.scorpiontrack_portal.switch import SWITCHES
 
 from . import setup_integration
 
+FIXED_NOW = datetime(2026, 10, 31, 12, 0, tzinfo=UTC)
+HYBRID_ISSUE_ID = "hybrid_share_unavailable_01SCORPIONTRACK_HYBRID_TEST"
+
 
 def _entity_id(
     entity_registry: er.EntityRegistry,
@@ -48,6 +63,18 @@ def _entity_id(
     entity_id = entity_registry.async_get_entity_id(domain, DOMAIN, unique_id)
     assert entity_id is not None
     return entity_id
+
+
+def _state(
+    hass: HomeAssistant,
+    entity_registry: er.EntityRegistry,
+    domain: str,
+    unique_id: str,
+) -> Any:
+    """Return the current state for a known ScorpionTrack unique ID."""
+    state = hass.states.get(_entity_id(entity_registry, domain, unique_id))
+    assert state is not None
+    return state
 
 
 async def _async_advance_poll(
@@ -61,12 +88,23 @@ async def _async_advance_poll(
     await hass.async_block_till_done()
 
 
+def _with_share_position(
+    share: ScorpionTrackShare, **changes: Any
+) -> ScorpionTrackShare:
+    """Return the share with its first vehicle's position changed."""
+    vehicle = share.vehicles[0]
+    return replace(
+        share,
+        vehicles=(replace(vehicle, position=replace(vehicle.position, **changes)),),
+    )
+
+
 async def test_share_unique_ids_and_tracker_state(
     hass: HomeAssistant,
     entity_registry: er.EntityRegistry,
     share_config_entry: MockConfigEntry,
 ) -> None:
-    """Share mode should retain IDs, rich state, and one GPS marker."""
+    """Share mode keeps its unique IDs and publishes one plain GPS tracker."""
     await setup_integration(hass, share_config_entry)
 
     expected_unique_ids = {
@@ -75,30 +113,18 @@ async def test_share_unique_ids_and_tracker_state(
         *(f"101_2001_{description.key}" for description in SHARE_BINARY_SENSORS),
         *(f"101_share_{description.key}" for description in SHARE_SENSORS),
     }
-    actual_unique_ids = {
+    assert {
         entry.unique_id
         for entry in er.async_entries_for_config_entry(
             entity_registry, share_config_entry.entry_id
         )
-    }
-    assert actual_unique_ids == expected_unique_ids
+    } == expected_unique_ids
 
-    tracker_id = _entity_id(entity_registry, "device_tracker", "101_2001_tracker")
-    tracker = hass.states.get(tracker_id)
-    assert tracker is not None
+    tracker = _state(hass, entity_registry, "device_tracker", "101_2001_tracker")
     assert tracker.attributes["latitude"] == 51.5074
     assert tracker.attributes["longitude"] == -0.1278
-    assert tracker.attributes["speed"] == 30.0
-    assert tracker.attributes["speed_unit"] == "mph"
-    assert tracker.attributes["registration"] == "AB12 CDE"
-
-    location_id = _entity_id(entity_registry, "sensor", "101_2001_location")
-    location = hass.states.get(location_id)
-    assert location is not None
-    assert location.state == "Westminster, London"
-    assert "latitude" not in location.attributes
-    assert "longitude" not in location.attributes
-    assert location.attributes["coordinates"] == "51.507400, -0.127800"
+    assert "registration" not in tracker.attributes
+    assert "speed" not in tracker.attributes
 
 
 async def test_account_unique_ids_and_tracker_state(
@@ -106,7 +132,7 @@ async def test_account_unique_ids_and_tracker_state(
     entity_registry: er.EntityRegistry,
     account_config_entry: MockConfigEntry,
 ) -> None:
-    """Account mode should retain every deployed unique ID and rich state."""
+    """Account mode keeps its unique IDs and publishes one plain GPS tracker."""
     await setup_integration(hass, account_config_entry)
 
     expected_unique_ids = {
@@ -117,53 +143,122 @@ async def test_account_unique_ids_and_tracker_state(
         *(f"42_2001_{description.key}" for description in ACCOUNT_BINARY_SENSORS),
         *(f"42_2001_{description.key}" for description in SWITCHES),
     }
-    actual_unique_ids = {
+    assert {
         entry.unique_id
         for entry in er.async_entries_for_config_entry(
             entity_registry, account_config_entry.entry_id
         )
-    }
-    assert actual_unique_ids == expected_unique_ids
+    } == expected_unique_ids
 
-    tracker_id = _entity_id(entity_registry, "device_tracker", "42_2001_tracker")
-    tracker = hass.states.get(tracker_id)
-    assert tracker is not None
+    tracker = _state(hass, entity_registry, "device_tracker", "42_2001_tracker")
     assert tracker.attributes["latitude"] == 51.5074
     assert tracker.attributes["longitude"] == -0.1278
-    assert tracker.attributes["formatted_location"] == "Westminster, London"
-    assert tracker.attributes["privacy_mode_enabled"] is False
-    assert tracker.attributes["zero_speed_mode_enabled"] is True
+    assert tracker.attributes["gps_accuracy"] == 5
+    assert "privacy_mode_enabled" not in tracker.attributes
 
 
 @pytest.mark.parametrize(
-    ("entry_fixture", "speed_unique_id"),
+    ("distance_units", "speed", "speed_unit", "odometer", "odometer_unit"),
     [
-        ("share_config_entry", "101_2001_speed"),
-        ("account_config_entry", "42_2001_speed"),
+        ("miles", 30.012, "mph", 1000.0, "mi"),
+        ("kilometres", 48.3, "km/h", 1609.344, "km"),
     ],
 )
-async def test_speed_unit_option_overrides_service_preference(
+async def test_account_units_follow_distance_preference(
     hass: HomeAssistant,
     entity_registry: er.EntityRegistry,
-    request: pytest.FixtureRequest,
-    entry_fixture: str,
-    speed_unique_id: str,
+    account_config_entry: MockConfigEntry,
+    client_mocks: SimpleNamespace,
+    mock_account: ScorpionTrackAccountData,
+    distance_units: str,
+    speed: float,
+    speed_unit: str,
+    odometer: float,
+    odometer_unit: str,
 ) -> None:
-    """The selected speed unit should override account/share preferences."""
-    entry: MockConfigEntry = request.getfixturevalue(entry_fixture)
-    entry.add_to_hass(hass)
-    hass.config_entries.async_update_entry(
-        entry,
-        options={"speed_unit": "km/h"},
+    """Native metric values are displayed in the account's preferred units."""
+    vehicle = replace(mock_account.vehicles[0], odometer=1609.344)
+    client_mocks.account.async_refresh_account.return_value = replace(
+        mock_account, distance_units=distance_units, vehicles=(vehicle,)
     )
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await setup_integration(hass, account_config_entry)
 
-    speed_id = _entity_id(entity_registry, "sensor", speed_unique_id)
-    speed = hass.states.get(speed_id)
-    assert speed is not None
-    assert speed.state == "48.3"
-    assert speed.attributes["unit_of_measurement"] == "km/h"
+    speed_state = _state(hass, entity_registry, "sensor", "42_2001_speed")
+    assert float(speed_state.state) == pytest.approx(speed, abs=0.001)
+    assert speed_state.attributes["unit_of_measurement"] == speed_unit
+    odometer_state = _state(hass, entity_registry, "sensor", "42_2001_odometer")
+    assert float(odometer_state.state) == pytest.approx(odometer)
+    assert odometer_state.attributes["unit_of_measurement"] == odometer_unit
+
+
+@pytest.mark.parametrize(
+    ("distance_units", "speed", "speed_unit"),
+    [("miles", 30.012, "mph"), ("kilometres", 48.3, "km/h")],
+)
+async def test_share_speed_follows_distance_preference(
+    hass: HomeAssistant,
+    entity_registry: er.EntityRegistry,
+    share_config_entry: MockConfigEntry,
+    client_mocks: SimpleNamespace,
+    mock_share: ScorpionTrackShare,
+    distance_units: str,
+    speed: float,
+    speed_unit: str,
+) -> None:
+    """Share speeds are displayed in the share owner's preferred unit."""
+    client_mocks.share.async_get_share.return_value = replace(
+        mock_share, distance_units=distance_units
+    )
+    await setup_integration(hass, share_config_entry)
+
+    state = _state(hass, entity_registry, "sensor", "101_2001_speed")
+    assert float(state.state) == pytest.approx(speed, abs=0.001)
+    assert state.attributes["unit_of_measurement"] == speed_unit
+
+
+@pytest.mark.parametrize(
+    ("status", "expected"),
+    [("moving", "moving"), ("Parked", "parked"), ("teleporting", STATE_UNKNOWN)],
+)
+async def test_account_status_is_a_known_enum_value(
+    hass: HomeAssistant,
+    entity_registry: er.EntityRegistry,
+    account_config_entry: MockConfigEntry,
+    client_mocks: SimpleNamespace,
+    mock_account: ScorpionTrackAccountData,
+    status: str,
+    expected: str,
+) -> None:
+    """Portal statuses map to translated enum states, never free text."""
+    client_mocks.account.async_refresh_account.return_value = replace(
+        mock_account, vehicles=(replace(mock_account.vehicles[0], status=status),)
+    )
+    await setup_integration(hass, account_config_entry)
+
+    state = _state(hass, entity_registry, "sensor", "42_2001_status")
+    assert state.state == expected
+
+
+@pytest.mark.parametrize(
+    ("status", "expected"), [("idle", "idle"), ("unknown", STATE_UNKNOWN)]
+)
+async def test_share_status_is_a_known_enum_value(
+    hass: HomeAssistant,
+    entity_registry: er.EntityRegistry,
+    share_config_entry: MockConfigEntry,
+    client_mocks: SimpleNamespace,
+    mock_share: ScorpionTrackShare,
+    status: str,
+    expected: str,
+) -> None:
+    """Share statuses map to translated enum states."""
+    client_mocks.share.async_get_share.return_value = replace(
+        mock_share, vehicles=(replace(mock_share.vehicles[0], status=status),)
+    )
+    await setup_integration(hass, share_config_entry)
+
+    state = _state(hass, entity_registry, "sensor", "101_2001_status")
+    assert state.state == expected
 
 
 async def test_hybrid_account_uses_newer_share_position(
@@ -173,43 +268,27 @@ async def test_hybrid_account_uses_newer_share_position(
     client_mocks: SimpleNamespace,
     mock_share: ScorpionTrackShare,
 ) -> None:
-    """Hybrid account entities should use the fresher shared position."""
-    share_position = replace(
-        mock_share.vehicles[0].position,
+    """Hybrid account entities use the fresher shared position and status."""
+    client_mocks.share.async_get_share.return_value = _with_share_position(
+        mock_share,
         latitude=52.1234,
         longitude=-1.2345,
         timestamp=datetime.now(UTC),
         speed_kmh=80.0,
-        address="Fresh share position",
     )
-    client_mocks.share.async_get_share.return_value = replace(
-        mock_share,
-        vehicles=(replace(mock_share.vehicles[0], position=share_position),),
-    )
-
     await setup_integration(hass, hybrid_account_config_entry)
 
-    tracker_id = _entity_id(entity_registry, "device_tracker", "42_2001_tracker")
-    tracker = hass.states.get(tracker_id)
-    assert tracker is not None
+    tracker = _state(hass, entity_registry, "device_tracker", "42_2001_tracker")
     assert tracker.attributes["latitude"] == 52.1234
     assert tracker.attributes["longitude"] == -1.2345
-    assert tracker.attributes["formatted_location"] == "Fresh share position"
-
-    speed_id = _entity_id(entity_registry, "sensor", "42_2001_speed")
-    speed = hass.states.get(speed_id)
-    assert speed is not None
-    assert speed.state == "80.0"
-    assert speed.attributes["unit_of_measurement"] == "km/h"
+    speed = _state(hass, entity_registry, "sensor", "42_2001_speed")
+    assert float(speed.state) == pytest.approx(49.710, abs=0.001)
+    assert _state(hass, entity_registry, "sensor", "42_2001_status").state == "moving"
 
 
 @pytest.mark.parametrize(
     ("latitude", "longitude"),
-    [
-        (None, None),
-        (None, -1.2345),
-        (52.1234, None),
-    ],
+    [(None, None), (None, -1.2345), (52.1234, None)],
 )
 async def test_hybrid_share_with_incomplete_coordinates_preserves_account_location(
     hass: HomeAssistant,
@@ -221,41 +300,20 @@ async def test_hybrid_share_with_incomplete_coordinates_preserves_account_locati
     longitude: float | None,
 ) -> None:
     """An incomplete shared coordinate pair must not replace portal location."""
-    share_position = replace(
-        mock_share.vehicles[0].position,
+    client_mocks.share.async_get_share.return_value = _with_share_position(
+        mock_share,
         latitude=latitude,
         longitude=longitude,
         timestamp=datetime.now(UTC),
         speed_kmh=80.0,
-        address="Incomplete share address",
     )
-    client_mocks.share.async_get_share.return_value = replace(
-        mock_share,
-        vehicles=(replace(mock_share.vehicles[0], position=share_position),),
-    )
-
     await setup_integration(hass, hybrid_account_config_entry)
 
-    tracker_id = _entity_id(entity_registry, "device_tracker", "42_2001_tracker")
-    tracker = hass.states.get(tracker_id)
-    assert tracker is not None
+    tracker = _state(hass, entity_registry, "device_tracker", "42_2001_tracker")
     assert tracker.attributes["latitude"] == 51.5074
     assert tracker.attributes["longitude"] == -0.1278
-    assert tracker.attributes["address"] == "Westminster, London"
-    assert tracker.attributes["formatted_location"] == "Westminster, London"
-
-    location_id = _entity_id(entity_registry, "sensor", "42_2001_location")
-    location = hass.states.get(location_id)
-    assert location is not None
-    assert location.state == "Westminster, London"
-    assert location.attributes["address"] == "Westminster, London"
-    assert location.attributes["formatted_location"] == "Westminster, London"
-    assert location.attributes["coordinates"] == "51.507400, -0.127800"
-
-    speed_id = _entity_id(entity_registry, "sensor", "42_2001_speed")
-    speed = hass.states.get(speed_id)
-    assert speed is not None
-    assert speed.state == "80.0"
+    speed = _state(hass, entity_registry, "sensor", "42_2001_speed")
+    assert float(speed.state) == pytest.approx(49.710, abs=0.001)
 
 
 async def test_hybrid_account_polls_share_faster_than_account(
@@ -279,46 +337,81 @@ async def test_hybrid_account_polls_share_faster_than_account(
     assert client_mocks.account.async_refresh_account.await_count == 2
 
 
-async def test_hybrid_share_failure_retains_newer_live_position(
+async def test_hybrid_share_connection_failure_keeps_newer_position(
     hass: HomeAssistant,
     freezer: Any,
     entity_registry: er.EntityRegistry,
+    issue_registry: ir.IssueRegistry,
     hybrid_account_config_entry: MockConfigEntry,
     client_mocks: SimpleNamespace,
     mock_share: ScorpionTrackShare,
 ) -> None:
-    """A failed optional share must retain the last newer live position."""
-    share_vehicle = replace(
-        mock_share.vehicles[0],
-        position=replace(
-            mock_share.vehicles[0].position,
-            latitude=53.0,
-            timestamp=datetime.now(UTC),
-        ),
-    )
-    client_mocks.share.async_get_share.return_value = replace(
-        mock_share, vehicles=(share_vehicle,)
+    """A transient share failure keeps the last newer position without a repair."""
+    client_mocks.share.async_get_share.return_value = _with_share_position(
+        mock_share, latitude=53.0, timestamp=datetime.now(UTC)
     )
     await setup_integration(hass, hybrid_account_config_entry)
-    tracker_id = _entity_id(entity_registry, "device_tracker", "42_2001_tracker")
-    tracker = hass.states.get(tracker_id)
-    assert tracker is not None
-    assert tracker.attributes["latitude"] == 53.0
     client_mocks.share.async_get_share.side_effect = ScorpionTrackConnectionError(
         "connection failed"
     )
 
     await _async_advance_poll(hass, freezer, SHARE_SCAN_INTERVAL)
 
-    tracker = hass.states.get(tracker_id)
-    assert tracker is not None
+    tracker = _state(hass, entity_registry, "device_tracker", "42_2001_tracker")
     assert tracker.state != STATE_UNAVAILABLE
     assert tracker.attributes["latitude"] == 53.0
-    assert hybrid_account_config_entry.runtime_data.share_last_update_success is False
-    assert (
-        hybrid_account_config_entry.runtime_data.share_last_exception_type
-        == "ScorpionTrackConnectionError"
+    assert issue_registry.async_get_issue(DOMAIN, HYBRID_ISSUE_ID) is None
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        ScorpionTrackInvalidTokenError("invalid token"),
+        ScorpionTrackShareUnavailableError("expired"),
+    ],
+)
+async def test_hybrid_share_unusable_link_raises_and_clears_repair(
+    hass: HomeAssistant,
+    freezer: Any,
+    entity_registry: er.EntityRegistry,
+    issue_registry: ir.IssueRegistry,
+    hybrid_account_config_entry: MockConfigEntry,
+    client_mocks: SimpleNamespace,
+    error: Exception,
+) -> None:
+    """An expired or revoked hybrid link asks the user to reconfigure it."""
+    client_mocks.share.async_get_share.side_effect = error
+    await setup_integration(hass, hybrid_account_config_entry)
+
+    issue = issue_registry.async_get_issue(DOMAIN, HYBRID_ISSUE_ID)
+    assert issue is not None
+    assert issue.translation_key == "hybrid_share_unavailable"
+    assert issue.translation_placeholders == {"title": "ScorpionTrack (Owner)"}
+    tracker = _state(hass, entity_registry, "device_tracker", "42_2001_tracker")
+    assert tracker.state != STATE_UNAVAILABLE
+
+    client_mocks.share.async_get_share.side_effect = None
+    await _async_advance_poll(hass, freezer, SHARE_SCAN_INTERVAL)
+
+    assert issue_registry.async_get_issue(DOMAIN, HYBRID_ISSUE_ID) is None
+
+
+async def test_hybrid_share_repair_is_cleared_on_unload(
+    hass: HomeAssistant,
+    issue_registry: ir.IssueRegistry,
+    hybrid_account_config_entry: MockConfigEntry,
+    client_mocks: SimpleNamespace,
+) -> None:
+    """Unloading, for example to reconfigure the link, clears the repair."""
+    client_mocks.share.async_get_share.side_effect = ScorpionTrackInvalidTokenError(
+        "invalid token"
     )
+    await setup_integration(hass, hybrid_account_config_entry)
+    assert issue_registry.async_get_issue(DOMAIN, HYBRID_ISSUE_ID) is not None
+
+    assert await hass.config_entries.async_unload(hybrid_account_config_entry.entry_id)
+
+    assert issue_registry.async_get_issue(DOMAIN, HYBRID_ISSUE_ID) is None
 
 
 async def test_hybrid_matches_vehicle_by_normalized_registration(
@@ -329,27 +422,15 @@ async def test_hybrid_matches_vehicle_by_normalized_registration(
     mock_share: ScorpionTrackShare,
 ) -> None:
     """A changed cross-source ID should fall back to a unique registration."""
-    share_vehicle = replace(
-        mock_share.vehicles[0],
-        id=9999,
-        registration="ab12cde",
-        position=replace(
-            mock_share.vehicles[0].position,
-            latitude=53.0,
-            timestamp=datetime.now(UTC),
-        ),
-    )
+    share = _with_share_position(mock_share, latitude=53.0, timestamp=datetime.now(UTC))
     client_mocks.share.async_get_share.return_value = replace(
-        mock_share, vehicles=(share_vehicle,)
+        share,
+        vehicles=(replace(share.vehicles[0], id=9999, registration="ab12cde"),),
     )
-
     await setup_integration(hass, hybrid_account_config_entry)
 
-    tracker_id = _entity_id(entity_registry, "device_tracker", "42_2001_tracker")
-    tracker = hass.states.get(tracker_id)
-    assert tracker is not None
+    tracker = _state(hass, entity_registry, "device_tracker", "42_2001_tracker")
     assert tracker.attributes["latitude"] == 53.0
-    assert hybrid_account_config_entry.runtime_data.matched_share_vehicle_count == 1
 
 
 async def test_hybrid_does_not_replace_newer_account_position(
@@ -360,23 +441,12 @@ async def test_hybrid_does_not_replace_newer_account_position(
     mock_share: ScorpionTrackShare,
 ) -> None:
     """A stale share payload should never move an account tracker backwards."""
-    share_vehicle = replace(
-        mock_share.vehicles[0],
-        position=replace(
-            mock_share.vehicles[0].position,
-            latitude=53.0,
-            timestamp=datetime.now(UTC) - timedelta(days=1),
-        ),
+    client_mocks.share.async_get_share.return_value = _with_share_position(
+        mock_share, latitude=53.0, timestamp=datetime.now(UTC) - timedelta(days=1)
     )
-    client_mocks.share.async_get_share.return_value = replace(
-        mock_share, vehicles=(share_vehicle,)
-    )
-
     await setup_integration(hass, hybrid_account_config_entry)
 
-    tracker_id = _entity_id(entity_registry, "device_tracker", "42_2001_tracker")
-    tracker = hass.states.get(tracker_id)
-    assert tracker is not None
+    tracker = _state(hass, entity_registry, "device_tracker", "42_2001_tracker")
     assert tracker.attributes["latitude"] == 51.5074
 
 
@@ -393,7 +463,6 @@ async def test_share_removed_vehicle_device_is_removed_and_recreated(
     """A vehicle removed from the share loses its device until it returns."""
     await setup_integration(hass, share_config_entry)
     assert device_registry.async_get_device(identifiers={(DOMAIN, "101_2001")})
-    assert device_registry.async_get_device(identifiers={(DOMAIN, "share_101")})
 
     client_mocks.share.async_get_share.return_value = replace(mock_share, vehicles=())
     await _async_advance_poll(hass, freezer, SHARE_SCAN_INTERVAL)
@@ -412,10 +481,8 @@ async def test_share_removed_vehicle_device_is_removed_and_recreated(
     client_mocks.share.async_get_share.return_value = mock_share
     await _async_advance_poll(hass, freezer, SHARE_SCAN_INTERVAL)
 
-    tracker_id = _entity_id(entity_registry, "device_tracker", "101_2001_tracker")
-    state = hass.states.get(tracker_id)
-    assert state is not None
-    assert state.attributes["latitude"] == 51.5074
+    tracker = _state(hass, entity_registry, "device_tracker", "101_2001_tracker")
+    assert tracker.attributes["latitude"] == 51.5074
 
 
 async def test_account_removed_vehicle_device_is_removed_and_recreated(
@@ -433,9 +500,7 @@ async def test_account_removed_vehicle_device_is_removed_and_recreated(
     assert device_registry.async_get_device(identifiers={(DOMAIN, "42_vehicle_2001")})
 
     client_mocks.account.async_refresh_account.return_value = replace(
-        mock_account,
-        vehicles=(),
-        fetched_at=datetime.now(UTC),
+        mock_account, vehicles=()
     )
     await _async_advance_poll(hass, freezer, ACCOUNT_SCAN_INTERVAL)
 
@@ -450,15 +515,11 @@ async def test_account_removed_vehicle_device_is_removed_and_recreated(
     )
     assert "Unexpected error updating listener" not in caplog.text
 
-    client_mocks.account.async_refresh_account.return_value = replace(
-        mock_account, fetched_at=datetime.now(UTC)
-    )
+    client_mocks.account.async_refresh_account.return_value = mock_account
     await _async_advance_poll(hass, freezer, ACCOUNT_SCAN_INTERVAL)
 
-    tracker_id = _entity_id(entity_registry, "device_tracker", "42_2001_tracker")
-    state = hass.states.get(tracker_id)
-    assert state is not None
-    assert state.state != STATE_UNAVAILABLE
+    tracker = _state(hass, entity_registry, "device_tracker", "42_2001_tracker")
+    assert tracker.state != STATE_UNAVAILABLE
 
 
 async def test_share_adds_new_vehicle_dynamically(
@@ -469,7 +530,7 @@ async def test_share_adds_new_vehicle_dynamically(
     client_mocks: SimpleNamespace,
     mock_share: ScorpionTrackShare,
 ) -> None:
-    """HACS should retain dynamic share-vehicle discovery."""
+    """New share vehicles are added without reloading the entry."""
     await setup_integration(hass, share_config_entry)
     new_vehicle = replace(
         mock_share.vehicles[0],
@@ -484,8 +545,7 @@ async def test_share_adds_new_vehicle_dynamically(
 
     await _async_advance_poll(hass, freezer, SHARE_SCAN_INTERVAL)
 
-    tracker_id = _entity_id(entity_registry, "device_tracker", "101_2002_tracker")
-    assert hass.states.get(tracker_id) is not None
+    assert _state(hass, entity_registry, "device_tracker", "101_2002_tracker")
     assert _entity_id(entity_registry, "sensor", "101_2002_status")
     assert _entity_id(entity_registry, "binary_sensor", "101_2002_ignition")
 
@@ -498,7 +558,7 @@ async def test_account_adds_new_vehicle_dynamically(
     client_mocks: SimpleNamespace,
     mock_account: ScorpionTrackAccountData,
 ) -> None:
-    """HACS should retain dynamic account-vehicle discovery."""
+    """New account vehicles are added without reloading the entry."""
     await setup_integration(hass, account_config_entry)
     new_vehicle = replace(
         mock_account.vehicles[0],
@@ -508,9 +568,7 @@ async def test_account_adds_new_vehicle_dynamically(
         model="Tiguan",
     )
     client_mocks.account.async_refresh_account.return_value = replace(
-        mock_account,
-        vehicles=(*mock_account.vehicles, new_vehicle),
-        fetched_at=datetime.now(UTC),
+        mock_account, vehicles=(*mock_account.vehicles, new_vehicle)
     )
 
     await _async_advance_poll(hass, freezer, ACCOUNT_SCAN_INTERVAL)
@@ -518,26 +576,6 @@ async def test_account_adds_new_vehicle_dynamically(
     assert _entity_id(entity_registry, "device_tracker", "42_2002_tracker")
     assert _entity_id(entity_registry, "sensor", "42_2002_status")
     assert _entity_id(entity_registry, "switch", "42_2002_privacy_mode")
-
-
-async def test_share_location_becomes_stale_with_unchanged_payload(
-    hass: HomeAssistant,
-    freezer: Any,
-    entity_registry: er.EntityRegistry,
-    share_config_entry: MockConfigEntry,
-) -> None:
-    """Clock-based state must advance while a parked vehicle reports nothing new."""
-    await setup_integration(hass, share_config_entry)
-    stale_id = _entity_id(entity_registry, "binary_sensor", "101_2001_location_stale")
-    state = hass.states.get(stale_id)
-    assert state is not None
-    assert state.state == "off"
-
-    await _async_advance_poll(hass, freezer, timedelta(hours=24))
-
-    state = hass.states.get(stale_id)
-    assert state is not None
-    assert state.state == "on"
 
 
 async def test_share_connection_error_makes_entities_unavailable(
@@ -549,12 +587,114 @@ async def test_share_connection_error_makes_entities_unavailable(
 ) -> None:
     """A transient refresh failure should mark existing entities unavailable."""
     await setup_integration(hass, share_config_entry)
-    tracker_id = _entity_id(entity_registry, "device_tracker", "101_2001_tracker")
     client_mocks.share.async_get_share.side_effect = ScorpionTrackConnectionError(
         "connection failed"
     )
 
     await _async_advance_poll(hass, freezer, SHARE_SCAN_INTERVAL)
-    state = hass.states.get(tracker_id)
-    assert state is not None
-    assert state.state == STATE_UNAVAILABLE
+
+    tracker = _state(hass, entity_registry, "device_tracker", "101_2001_tracker")
+    assert tracker.state == STATE_UNAVAILABLE
+
+
+def _deterministic_share(share: ScorpionTrackShare) -> ScorpionTrackShare:
+    """Return the fixture share with fixed timestamps."""
+    share = _with_share_position(share, timestamp=FIXED_NOW - timedelta(minutes=5))
+    return replace(
+        share,
+        created_at=FIXED_NOW - timedelta(days=3),
+        expires_at=FIXED_NOW + timedelta(days=28),
+    )
+
+
+def _deterministic_account(
+    account: ScorpionTrackAccountData,
+) -> ScorpionTrackAccountData:
+    """Return the fixture account with fixed timestamps and full readings."""
+    vehicle = account.vehicles[0]
+    assert vehicle.position is not None
+    position = replace(
+        vehicle.position,
+        timestamp=FIXED_NOW - timedelta(minutes=5),
+        gps_satellites=9,
+        hdop=0.8,
+    )
+    vehicle = replace(
+        vehicle,
+        position=position,
+        odometer=12345.6,
+        vehicle_voltage=12.64,
+        backup_battery_voltage=4.1,
+        gps_antenna_voltage=3.3,
+        gps_antenna_current=12.0,
+        mot_due=date(2027, 3, 14),
+        tax_due=date(2027, 1, 1),
+        last_service_date=date(2026, 9, 1),
+        unit_last_checked_in=FIXED_NOW - timedelta(minutes=10),
+        ewm_enabled=True,
+        armed_mode_enabled=False,
+        g_sense_enabled=True,
+        pending_commands_count=1,
+    )
+    alert = ScorpionTrackAlertSummary(
+        id=1,
+        source="vehicle",
+        type="Speeding",
+        severity="medium",
+        timestamp=FIXED_NOW - timedelta(hours=1),
+        read_status=False,
+        vehicle_id=2001,
+        vehicle_registration="AB12 CDE",
+        vehicle_alias="Golf R",
+        vehicle_name=None,
+        alert_name=None,
+        speed_recorded=None,
+        road_speed=None,
+        idle=None,
+        engine_hours=None,
+        latitude=None,
+        longitude=None,
+    )
+    return replace(
+        account,
+        vehicles=(vehicle,),
+        alerts=(alert,),
+        fetched_at=FIXED_NOW,
+    )
+
+
+@pytest.mark.usefixtures("entity_registry_enabled_by_default")
+@pytest.mark.parametrize(
+    ("entry_fixture", "platform"),
+    [
+        ("share_config_entry", Platform.BINARY_SENSOR),
+        ("share_config_entry", Platform.DEVICE_TRACKER),
+        ("share_config_entry", Platform.SENSOR),
+        ("account_config_entry", Platform.BINARY_SENSOR),
+        ("account_config_entry", Platform.BUTTON),
+        ("account_config_entry", Platform.DEVICE_TRACKER),
+        ("account_config_entry", Platform.SENSOR),
+        ("account_config_entry", Platform.SWITCH),
+    ],
+)
+async def test_entity_snapshots(
+    hass: HomeAssistant,
+    entity_registry: er.EntityRegistry,
+    snapshot: SnapshotAssertion,
+    request: pytest.FixtureRequest,
+    client_mocks: SimpleNamespace,
+    mock_share: ScorpionTrackShare,
+    mock_account: ScorpionTrackAccountData,
+    entry_fixture: str,
+    platform: Platform,
+) -> None:
+    """Every entity's registry entry and state match the reviewed snapshot."""
+    client_mocks.share.async_get_share.return_value = _deterministic_share(mock_share)
+    client_mocks.account.async_refresh_account.return_value = _deterministic_account(
+        mock_account
+    )
+    entry: MockConfigEntry = request.getfixturevalue(entry_fixture)
+    with patch("custom_components.scorpiontrack_portal.PLATFORMS", [platform]):
+        await setup_integration(hass, entry)
+
+    await snapshot_platform(hass, entity_registry, snapshot, entry.entry_id)

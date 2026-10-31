@@ -13,6 +13,7 @@ from homeassistant.const import CONF_EMAIL
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryError
 from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
 from pyscorpiontrack import (
@@ -37,7 +38,7 @@ from .account_api import (
     ScorpionTrackVehiclePosition,
     ScorpionTrackVehicleSummary,
 )
-from .const import ACCOUNT_SCAN_INTERVAL, DOMAIN, SHARE_SCAN_INTERVAL, get_speed_unit
+from .const import ACCOUNT_SCAN_INTERVAL, DOMAIN, SHARE_SCAN_INTERVAL
 from .utils import stable_hash
 
 _LOGGER = logging.getLogger(__name__)
@@ -89,16 +90,7 @@ class ScorpionTrackAccountCoordinator(DataUpdateCoordinator[ScorpionTrackAccount
                 if share_client is not None
                 else ACCOUNT_SCAN_INTERVAL
             ),
-        )
-
-    @property
-    def speed_unit(self) -> str:
-        """Return the configured unit for speed entities."""
-        account = self.data or self._account_data
-        return get_speed_unit(
-            self.config_entry.data,
-            self.config_entry.options,
-            uses_miles=account.uses_miles if account is not None else False,
+            always_update=False,
         )
 
     async def async_request_account_refresh(self) -> None:
@@ -178,6 +170,16 @@ class ScorpionTrackAccountCoordinator(DataUpdateCoordinator[ScorpionTrackAccount
                     "portal positions until it recovers",
                     type(err).__name__,
                 )
+            if not isinstance(err, ScorpionTrackShareConnectionError):
+                ir.async_create_issue(
+                    self.hass,
+                    DOMAIN,
+                    hybrid_share_issue_id(self.config_entry),
+                    is_fixable=False,
+                    severity=ir.IssueSeverity.WARNING,
+                    translation_key="hybrid_share_unavailable",
+                    translation_placeholders={"title": self.config_entry.title},
+                )
             self.share_last_update_success = False
             self.share_last_exception_type = type(err).__name__
             self.matched_share_vehicle_count = 0
@@ -185,6 +187,9 @@ class ScorpionTrackAccountCoordinator(DataUpdateCoordinator[ScorpionTrackAccount
 
         if self.share_last_update_success is False:
             _LOGGER.info("Optional ScorpionTrack share is available again")
+        ir.async_delete_issue(
+            self.hass, DOMAIN, hybrid_share_issue_id(self.config_entry)
+        )
         self.share = share
         self.share_last_update_success = True
         self.share_last_exception_type = None
@@ -216,16 +221,7 @@ class ScorpionTrackShareCoordinator(DataUpdateCoordinator[ScorpionTrackShare]):
             config_entry=entry,
             name=f"{DOMAIN}_{entry.entry_id}",
             update_interval=SHARE_SCAN_INTERVAL,
-        )
-
-    @property
-    def speed_unit(self) -> str:
-        """Return the configured unit for speed entities."""
-        share = self.data
-        return get_speed_unit(
-            self.config_entry.data,
-            self.config_entry.options,
-            uses_miles=share.uses_miles if share is not None else False,
+            always_update=False,
         )
 
     @override
@@ -262,6 +258,11 @@ class ScorpionTrackShareCoordinator(DataUpdateCoordinator[ScorpionTrackShare]):
             },
         )
         return share
+
+
+def hybrid_share_issue_id(entry: ScorpionTrackConfigEntry) -> str:
+    """Return the repair issue ID for an entry's unusable hybrid share."""
+    return f"hybrid_share_unavailable_{entry.entry_id}"
 
 
 def _async_remove_stale_devices(
@@ -377,7 +378,6 @@ def _merge_share_position(
         return account_vehicle
 
     base = account_position or _empty_account_position()
-    friendly_state = share_vehicle.status.replace("_", " ").title()
     if share_position.latitude is None or share_position.longitude is None:
         latitude, longitude = base.latitude, base.longitude
         address = base.address
@@ -395,13 +395,13 @@ def _merge_share_position(
         address=address,
         ignition=share_position.ignition,
         raw_state=share_vehicle.status,
-        friendly_state=friendly_state,
+        friendly_state=share_vehicle.status,
     )
     return replace(
         account_vehicle,
         position=position,
         raw_state=share_vehicle.status,
-        status=friendly_state,
+        status=share_vehicle.status,
     )
 
 

@@ -15,26 +15,22 @@
         "data": {
           "email": "Email",
           "password": "Password",
-          "share_token": "Share URL or token (optional)",
-          "speed_unit": "Speed unit"
+          "share_token": "Share URL or token (optional)"
         },
         "data_description": {
           "email": "The email address you use to sign in to the ScorpionTrack portal.",
           "password": "The password for that portal account.",
-          "share_token": "Optional: a share containing the same vehicles refreshes live location, speed, heading, ignition and status every two minutes.",
-          "speed_unit": "The unit used for speed sensors."
+          "share_token": "Optional: a share containing the same vehicles refreshes live location, speed, heading, ignition and status every two minutes."
         }
       },
       "share": {
         "title": "Add shared location",
         "description": "Paste either the full ScorpionTrack shared-location URL or just the token from it. A single share can include multiple vehicles.",
         "data": {
-          "share_token": "Share URL or token",
-          "speed_unit": "Speed unit"
+          "share_token": "Share URL or token"
         },
         "data_description": {
-          "share_token": "Paste the full ScorpionTrack shared-location URL or just the token itself.",
-          "speed_unit": "The unit used for speed sensors."
+          "share_token": "Paste the full ScorpionTrack shared-location URL or just the token itself."
         }
       },
       "reauth_confirm": {
@@ -84,17 +80,111 @@
       "wrong_share": "This link belongs to a different shared location. Add it as a new integration entry instead."
     }
   },
-  "options": {
-    "step": {
-      "init": {
-        "title": "ScorpionTrack Portal options",
-        "description": "Choose how speed is displayed.",
-        "data": {
-          "speed_unit": "Speed unit"
-        },
-        "data_description": {
-          "speed_unit": "The unit used for speed sensors."
+  "entity": {
+    "binary_sensor": {
+      "armed_mode": {
+        "name": "Armed mode"
+      },
+      "engine": {
+        "name": "Engine"
+      },
+      "ewm": {
+        "name": "EWM"
+      },
+      "g_sense": {
+        "name": "G-Sense"
+      },
+      "garage_mode": {
+        "name": "Garage mode"
+      },
+      "ignition": {
+        "name": "Ignition"
+      },
+      "no_alert_mode": {
+        "name": "No-alert mode"
+      },
+      "pending_commands": {
+        "name": "Pending commands"
+      },
+      "transport_mode": {
+        "name": "Transport mode"
+      }
+    },
+    "button": {
+      "mark_alerts_read": {
+        "name": "Mark alerts read"
+      }
+    },
+    "sensor": {
+      "backup_battery_voltage": {
+        "name": "Backup battery voltage"
+      },
+      "battery_voltage": {
+        "name": "Battery voltage"
+      },
+      "gps_antenna_current": {
+        "name": "GPS antenna current"
+      },
+      "gps_antenna_voltage": {
+        "name": "GPS antenna voltage"
+      },
+      "gps_hdop": {
+        "name": "GPS HDOP"
+      },
+      "gps_satellites": {
+        "name": "GPS satellites"
+      },
+      "heading": {
+        "name": "Heading"
+      },
+      "last_reported": {
+        "name": "Last reported"
+      },
+      "last_service_date": {
+        "name": "Last service date"
+      },
+      "latest_alert": {
+        "name": "Latest alert"
+      },
+      "latest_alert_time": {
+        "name": "Latest alert time"
+      },
+      "mot_due": {
+        "name": "MOT due"
+      },
+      "odometer": {
+        "name": "Odometer"
+      },
+      "share_expires": {
+        "name": "Share expires"
+      },
+      "status": {
+        "name": "Status",
+        "state": {
+          "alarm": "Alarm",
+          "alert": "Alert",
+          "idle": "Idle",
+          "ignition": "Ignition on",
+          "moving": "Moving",
+          "parked": "Parked"
         }
+      },
+      "tax_due": {
+        "name": "Tax due"
+      },
+      "unit_last_checked_in": {
+        "name": "Unit last checked in"
+      },
+      "unread_alerts": {
+        "name": "Unread alerts"
+      }
+    },
+    "switch": {
+      "privacy_mode": {
+        "name": "Privacy mode"
+      },
+      "zero_speed_mode": {
+        "name": "Zero-speed mode"
       }
     }
   },
@@ -112,7 +202,7 @@
       "message": "ScorpionTrack could not mark the alerts as read."
     },
     "privacy_mode_update_failed": {
-      "message": "ScorpionTrack could not update Privacy Mode."
+      "message": "ScorpionTrack could not update Privacy mode."
     },
     "share_unavailable": {
       "message": "The shared location is unavailable."
@@ -121,7 +211,13 @@
       "message": "ScorpionTrack returned an unexpected response."
     },
     "zero_speed_mode_update_failed": {
-      "message": "ScorpionTrack could not update Zero-Speed Mode."
+      "message": "ScorpionTrack could not update Zero-speed mode."
+    }
+  },
+  "issues": {
+    "hybrid_share_unavailable": {
+      "title": "The share link for {title} no longer works",
+      "description": "The optional shared-location link used for faster live positions is invalid, has expired or has been revoked. The integration is using portal-account positions instead.\n\nTo fix this, open the ScorpionTrack Portal entry, select **Reconfigure**, and paste a new share link or clear the field to use portal-account data only."
     }
   }
 }

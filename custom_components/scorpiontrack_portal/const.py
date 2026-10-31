@@ -2,11 +2,9 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
 from datetime import timedelta
-from typing import Any
 
-from homeassistant.const import Platform, UnitOfSpeed
+from homeassistant.const import Platform
 
 DOMAIN = "scorpiontrack_portal"
 ACCOUNT_DEFAULT_NAME = "ScorpionTrack Account"
@@ -15,6 +13,7 @@ MANUFACTURER = "ScorpionTrack"
 
 CONF_SETUP_TYPE = "setup_type"
 CONF_SHARE_TOKEN = "share_token"
+# Removed in config entry version 1.3; kept so the migration can drop it.
 CONF_SPEED_UNIT = "speed_unit"
 
 SETUP_TYPE_ACCOUNT = "account"
@@ -31,12 +30,6 @@ FMS_ALERTS_BULK_READ_PATH = "/alerts-dashboard/bulk-read"
 
 ACCOUNT_SCAN_INTERVAL = timedelta(minutes=5)
 SHARE_SCAN_INTERVAL = timedelta(minutes=2)
-STALE_POSITION_THRESHOLD = timedelta(hours=24)
-
-SPEED_UNITS: tuple[str, ...] = (
-    UnitOfSpeed.MILES_PER_HOUR,
-    UnitOfSpeed.KILOMETERS_PER_HOUR,
-)
 
 PLATFORMS: tuple[Platform, ...] = (
     Platform.SENSOR,
@@ -45,27 +38,3 @@ PLATFORMS: tuple[Platform, ...] = (
     Platform.SWITCH,
     Platform.BUTTON,
 )
-
-
-def get_speed_unit(
-    data: Mapping[str, Any],
-    options: Mapping[str, Any],
-    *,
-    uses_miles: bool,
-) -> str:
-    """Return the configured speed unit or the source's existing preference."""
-    value = options.get(CONF_SPEED_UNIT, data.get(CONF_SPEED_UNIT))
-    if value in SPEED_UNITS:
-        return str(value)
-    return UnitOfSpeed.MILES_PER_HOUR if uses_miles else UnitOfSpeed.KILOMETERS_PER_HOUR
-
-
-def convert_speed(
-    speed_kmh: float | None, unit: str, *, precision: int = 1
-) -> float | None:
-    """Convert a normalized km/h speed into the configured display unit."""
-    if speed_kmh is None:
-        return None
-    if unit == UnitOfSpeed.MILES_PER_HOUR:
-        return round(speed_kmh * 0.621371, precision)
-    return round(speed_kmh, precision)

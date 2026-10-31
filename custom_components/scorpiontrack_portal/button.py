@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, override
+from typing import override
 
 from homeassistant.components.button import ButtonEntity
 from homeassistant.core import HomeAssistant
@@ -35,19 +35,11 @@ async def async_setup_entry(
 class ScorpionTrackMarkAlertsReadButton(ScorpionTrackAccountEntity, ButtonEntity):
     """Mark every unread portal alert as read."""
 
-    _attr_name = "Mark Alerts Read"
-    _attr_icon = "mdi:bell-check-outline"
+    _attr_translation_key = "mark_alerts_read"
 
     def __init__(self, coordinator: ScorpionTrackAccountCoordinator) -> None:
         """Initialize the alert button."""
-        super().__init__(coordinator)
-        self._attr_unique_id = f"{coordinator.account_identifier}_mark_alerts_read"
-
-    @property
-    @override
-    def extra_state_attributes(self) -> dict[str, Any]:
-        """Return extra state attributes."""
-        return self.common_account_attributes()
+        super().__init__(coordinator, "mark_alerts_read")
 
     @override
     async def async_press(self) -> None:
