@@ -520,6 +520,26 @@ async def test_account_adds_new_vehicle_dynamically(
     assert _entity_id(entity_registry, "switch", "42_2002_privacy_mode")
 
 
+async def test_share_location_becomes_stale_with_unchanged_payload(
+    hass: HomeAssistant,
+    freezer: Any,
+    entity_registry: er.EntityRegistry,
+    share_config_entry: MockConfigEntry,
+) -> None:
+    """Clock-based state must advance while a parked vehicle reports nothing new."""
+    await setup_integration(hass, share_config_entry)
+    stale_id = _entity_id(entity_registry, "binary_sensor", "101_2001_location_stale")
+    state = hass.states.get(stale_id)
+    assert state is not None
+    assert state.state == "off"
+
+    await _async_advance_poll(hass, freezer, timedelta(hours=24))
+
+    state = hass.states.get(stale_id)
+    assert state is not None
+    assert state.state == "on"
+
+
 async def test_share_connection_error_makes_entities_unavailable(
     hass: HomeAssistant,
     freezer: Any,

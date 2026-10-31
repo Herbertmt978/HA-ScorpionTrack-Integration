@@ -89,7 +89,6 @@ class ScorpionTrackAccountCoordinator(DataUpdateCoordinator[ScorpionTrackAccount
                 if share_client is not None
                 else ACCOUNT_SCAN_INTERVAL
             ),
-            always_update=False,
         )
 
     @property
@@ -217,7 +216,6 @@ class ScorpionTrackShareCoordinator(DataUpdateCoordinator[ScorpionTrackShare]):
             config_entry=entry,
             name=f"{DOMAIN}_{entry.entry_id}",
             update_interval=SHARE_SCAN_INTERVAL,
-            always_update=False,
         )
 
     @property
