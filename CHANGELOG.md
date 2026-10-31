@@ -49,7 +49,7 @@ This release brings the integration in line with Home Assistant Core's Platinum 
 
 - Reauthentication with credentials for a different account now aborts instead of showing an error.
 - Portal and fleet API failures are logged at debug level, and logs no longer include the account's email address. The optional hybrid share logs once when it fails and once when it recovers.
-- Unchanged data no longer rewrites entity states on every poll.
+- Unchanged shared-location data no longer rewrites entity states on every poll. Portal-account entities still update on every refresh, because scheduled modes depend on the time.
 - Config entries migrate automatically to version 1.3.
 
 ### Developer

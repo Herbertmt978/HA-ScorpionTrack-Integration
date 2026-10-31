@@ -250,7 +250,7 @@ class ScorpionTrackAccountData:
     total_alerts: int | None
     unread_alerts: int | None
     alerts: tuple[ScorpionTrackAlertSummary, ...]
-    fetched_at: datetime = field(compare=False)
+    fetched_at: datetime
 
     @property
     def uses_miles(self) -> bool:

@@ -80,6 +80,9 @@ class ScorpionTrackAccountCoordinator(DataUpdateCoordinator[ScorpionTrackAccount
             else unique_id_suffix
         )
         self.vehicles_by_id: dict[int, ScorpionTrackVehicleSummary] = {}
+        # Listeners must run on every refresh: scheduled transport, garage and
+        # no-alert modes are evaluated against the clock, so their state can
+        # change while the portal payload stays the same.
         super().__init__(
             hass,
             _LOGGER,
@@ -90,7 +93,6 @@ class ScorpionTrackAccountCoordinator(DataUpdateCoordinator[ScorpionTrackAccount
                 if share_client is not None
                 else ACCOUNT_SCAN_INTERVAL
             ),
-            always_update=False,
         )
 
     async def async_request_account_refresh(self) -> None:

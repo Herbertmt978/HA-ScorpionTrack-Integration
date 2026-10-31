@@ -14,6 +14,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers import issue_registry as ir
+from homeassistant.util import dt as dt_util
 from pyscorpiontrack import (
     ScorpionTrackConnectionError,
     ScorpionTrackInvalidTokenError,
@@ -259,6 +260,44 @@ async def test_share_status_is_a_known_enum_value(
 
     state = _state(hass, entity_registry, "sensor", "101_2001_status")
     assert state.state == expected
+
+
+@pytest.mark.parametrize(
+    ("begin_field", "end_field", "unique_id"),
+    [
+        ("garage_mode_begin", "garage_mode_end", "42_2001_garage_mode_active"),
+        ("transport_mode_begin", "transport_mode_end", "42_2001_transport_mode_active"),
+        ("no_alert_start", "no_alert_end", "42_2001_no_alert_mode_active"),
+    ],
+)
+async def test_account_mode_windows_follow_the_clock_with_unchanged_payload(
+    hass: HomeAssistant,
+    freezer: Any,
+    entity_registry: er.EntityRegistry,
+    account_config_entry: MockConfigEntry,
+    client_mocks: SimpleNamespace,
+    mock_account: ScorpionTrackAccountData,
+    begin_field: str,
+    end_field: str,
+    unique_id: str,
+) -> None:
+    """Scheduled portal modes switch at their boundaries without new data."""
+    now = dt_util.utcnow()
+    vehicle = replace(
+        mock_account.vehicles[0],
+        **{begin_field: now + timedelta(hours=1), end_field: now + timedelta(hours=3)},
+    )
+    client_mocks.account.async_refresh_account.return_value = replace(
+        mock_account, vehicles=(vehicle,)
+    )
+    await setup_integration(hass, account_config_entry)
+    assert _state(hass, entity_registry, "binary_sensor", unique_id).state == "off"
+
+    await _async_advance_poll(hass, freezer, timedelta(hours=2))
+    assert _state(hass, entity_registry, "binary_sensor", unique_id).state == "on"
+
+    await _async_advance_poll(hass, freezer, timedelta(hours=2))
+    assert _state(hass, entity_registry, "binary_sensor", unique_id).state == "off"
 
 
 async def test_hybrid_account_uses_newer_share_position(
