@@ -1014,3 +1014,21 @@ async def test_share_text_is_cut_to_the_state_limit(
     assert shared_by.state == "B" * 255
     title = _state(hass, entity_registry, "sensor", "101_share_share_title_v2")
     assert title.state == STATE_UNKNOWN
+
+
+@pytest.mark.usefixtures("entity_registry_enabled_by_default")
+async def test_share_created_without_time_zone_is_utc(
+    hass: HomeAssistant,
+    entity_registry: er.EntityRegistry,
+    share_config_entry: MockConfigEntry,
+    client_mocks: SimpleNamespace,
+    mock_share: ScorpionTrackShare,
+) -> None:
+    """A share creation time sent without a time zone is read as UTC."""
+    client_mocks.share.async_get_share.return_value = replace(
+        mock_share, created_at=datetime(2026, 10, 28, 12, 0)
+    )
+    await setup_integration(hass, share_config_entry)
+
+    created = _state(hass, entity_registry, "sensor", "101_share_share_created_v2")
+    assert created.state == "2026-10-28T12:00:00+00:00"

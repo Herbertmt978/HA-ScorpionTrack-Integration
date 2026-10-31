@@ -119,9 +119,16 @@ If you updated before deleting the old entries, they are left under the built-in
 
 Version 0.6.0 brings back the entities that 0.5.0 removed, disabled, so you can turn on any you want. They are new entities, so they start disabled whichever version you update from, and nothing you use today changes. Entity attributes stay removed.
 
-- **From 0.5.x:** update through HACS and restart. The entities appear, disabled, on each device. Each normally gets the entity ID it had in 0.4.0, such as `sensor.golf_r_registration`. If something else now uses that ID, such as a template you made to replace it, Home Assistant adds a suffix such as `_2`. Entity IDs, names and areas you customised in 0.4.0 are not restored.
-- **From 0.4.0:** read [Upgrade to 0.5.0](#upgrade-to-050) first, because every 0.5.0 change still applies. The old entities are removed during the update and the new ones appear, disabled, with the same default entity IDs. Enable the ones your automations and dashboards use.
+- **From 0.5.x:** update through HACS and restart. The entities appear, disabled, on each device.
+- **From 0.4.0:** read [Upgrade to 0.5.0](#upgrade-to-050) first, because every 0.5.0 change still applies. The old entities are removed during the update and the new ones appear, disabled. Enable the ones your automations and dashboards use.
 - **New setups:** the entities are added disabled.
+
+Entity IDs are given when the entities are added, even though they start disabled. Each normally gets the entity ID it had in 0.4.0, such as `sensor.golf_r_registration`, with these exceptions:
+
+- A vehicle in an area, or one you renamed, gets IDs built from the area and its current name, such as `sensor.driveway_golf_r_registration`. Rename them in the entity settings if your automations use the old IDs.
+- If something else already uses the ID, such as a helper you made to replace the entity, the restored entity gets a suffix such as `_2`.
+- If you replaced the entity with a YAML template that has no `unique_id`, give the template a `unique_id` or a different entity ID before you update. Otherwise, depending on load order, the template can be moved to an ID ending in `_2`.
+- Entity IDs, names and areas you customised in 0.4.0 are not restored.
 
 To enable one entity, open its device from `Settings > Devices & services > ScorpionTrack Portal`, select the line saying that entities are not shown, select the entity, open its settings, turn on `Enabled` and select `Update`. To enable several, open `Settings > Devices & services > Entities`, search for the integration, show disabled entities, select them and choose `Enable selected`. Home Assistant reloads the entry about 30 seconds later, and the entities then report values.
 
@@ -177,7 +184,7 @@ The examples use a vehicle called `golf_r`; replace it with your vehicle's entit
 | `vehicle_voltage`, `backup_battery_voltage`, `gps_antenna_voltage`, `gps_antenna_current`, `gps_satellites`, `gps_hdop` | The matching sensors |
 | `last_service_date` | Last service date sensor (disabled by default) |
 | `last_reported`, `position_timestamp`, `last_reported_age_seconds`, `stale`, `stale_after_hours` | Last reported sensor. For `stale`, the Location stale binary sensor from 0.6.0 (disabled by default; the threshold is fixed at 24 hours), or the template in [Replacing removed entities](#replacing-removed-entities) |
-| `status`, `portal_state`, `position_state` | Status sensor. From 0.6.0, the raw portal value is also in the Portal state sensor (disabled by default) |
+| `status`, `portal_state`, `position_state` | Status sensor. From 0.6.0, the raw status is also in the Portal state sensor (disabled by default): the portal's value, or the shared-location status when a hybrid share position is in use |
 | `privacy_mode_enabled`, `zero_speed_mode_enabled` | Privacy mode and Zero-speed mode switches |
 | `armed_mode_enabled`, `ewm_enabled`, `g_sense_enabled`, `transport_mode_active`, `garage_mode_active`, `no_alert_mode_active`, `pending_commands_count` | The matching binary sensors. From 0.6.0, the number of pending commands is also in the Pending command count sensor (disabled by default) |
 | `make`, `model` | The device page. From 0.6.0, also the Make and Model sensors (disabled by default) |

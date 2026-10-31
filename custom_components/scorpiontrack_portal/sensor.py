@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from itertools import chain
 from typing import override
 
@@ -99,6 +99,13 @@ def _as_date(value: date | datetime | None) -> date | None:
     if isinstance(value, datetime):
         return value.date()
     return value
+
+
+def _utc(value: datetime | None) -> datetime | None:
+    """Return a share time, reading one sent without a time zone as UTC."""
+    if value is None or value.tzinfo is not None:
+        return value
+    return value.replace(tzinfo=UTC)
 
 
 def _text(value: str | None) -> str | None:
@@ -456,7 +463,7 @@ SHARE_SENSORS: tuple[ScorpionTrackShareSensorDescription, ...] = (
         device_class=SensorDeviceClass.TIMESTAMP,
         entity_category=EntityCategory.DIAGNOSTIC,
         entity_registry_enabled_default=False,
-        value_fn=lambda share: share.created_at,
+        value_fn=lambda share: _utc(share.created_at),
     ),
 )
 

@@ -10,7 +10,7 @@ No changes yet.
 
 ### Added
 
-- Bring back the entities removed in 0.5.0, disabled by default, so you can enable any you want. They are new entities with new unique IDs, so they start disabled whichever version you update from, and normally get the entity IDs they had in 0.4.0. Entity attributes stay removed.
+- Bring back the entities removed in 0.5.0, disabled by default, so you can enable any you want. They are new entities with new unique IDs, so they start disabled whichever version you update from. They normally get the entity IDs they had in 0.4.0; a vehicle in an area, or one you renamed, gets IDs built from the area and its current name. Entity attributes stay removed.
   - Portal account: Vehicle count, Last refreshed and User ID.
   - Portal-account vehicles: Location, Location stale, Portal state, Installed, Registration, Description, Alias, Colour, Fuel type, Battery type, Make, Model, Vehicle type, Unit make, Unit model, Pending command count, Driver module fitted, Installation complete and Immobiliser fitted.
   - Location share: Share title, Shared by and Share created.
