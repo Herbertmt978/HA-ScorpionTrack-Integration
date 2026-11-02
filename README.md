@@ -41,7 +41,7 @@ positions.
 | Capability | Built-in ScorpionTrack | ScorpionTrack Portal |
 | --- | --- | --- |
 | Integration domain | `scorpiontrack` | `scorpiontrack_portal` |
-| Installation | Home Assistant's integration screen | HACS custom repository or manual copy |
+| Installation | Home Assistant's integration screen | HACS or manual copy |
 | Data source | Shared-location API | Portal login, plus the shared-location API when a share is added |
 | Shared-location links | Yes | Yes |
 | Portal account login | No | Yes |
@@ -75,17 +75,15 @@ Treat Home Assistant backups as sensitive because they can contain integration c
 
 ## Installation
 
-### HACS custom repository
+### HACS
 
-ScorpionTrack Portal is not yet in the HACS default list. Use the **Open this repository in HACS** button above, or add it manually:
+ScorpionTrack Portal is in the HACS default list.
 
-1. Open HACS in Home Assistant.
-2. Select `Integrations`.
-3. Open the three-dot menu and select `Custom repositories`.
-4. Add `https://github.com/Herbertmt978/HA-ScorpionTrack-Integration`.
-5. Select `Integration` as the category.
-6. Download `ScorpionTrack Portal`.
-7. Restart Home Assistant.
+1. Open HACS in Home Assistant and search for `ScorpionTrack Portal`, or use the **Open this repository in HACS** button above.
+2. Download `ScorpionTrack Portal`.
+3. Restart Home Assistant.
+
+If you added this repository as a custom repository before it joined the default list, it keeps working; you don't need to change anything.
 
 <details>
 <summary><strong>Manual installation</strong></summary>
