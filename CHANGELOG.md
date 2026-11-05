@@ -4,7 +4,9 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
-No changes yet.
+### Changed
+
+- ScorpionTrack Portal is in the HACS default list, so the README's installation steps now start with searching for it in HACS rather than adding a custom repository.
 
 ## 0.6.1 - 2026-10-31
 
